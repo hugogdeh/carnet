@@ -1,0 +1,2626 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Carnet — Suivi nutrition &amp; poids</title>
+
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./icon-192.png">
+<meta name="theme-color" content="#F2F2F7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Carnet">
+<meta name="mobile-web-app-capable" content="yes">
+
+<style>
+  :root {
+    --ink:        #F2F2F7;
+    --surface:    #FFFFFF;
+    --surface-2:  #E5E5EA;
+    --hairline:   #E5E5EA;
+    --text:       #000000;
+    --text-muted: #6E6E73;
+    --text-faint: #AEAEB2;
+    --accent:     #007AFF;
+    --accent-ink: #FFFFFF;
+    --good:       #34C759;
+    --warn:       #FF3B30;
+    --nav-bg:     rgba(249,249,249,0.94);
+    --c-kcal:     #FF9500;
+    --c-prot:     #FF3B30;
+    --c-gluc:     #E6B800;
+    --c-lip:      #AF52DE;
+    --c-fib:      #34C759;
+    --c-poids:    #5856D6;
+
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+
+    --radius: 13px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink:        #000000;
+      --surface:    #1C1C1E;
+      --surface-2:  #141416;
+      --hairline:   #38383A;
+      --text:       #FFFFFF;
+      --text-muted: #98989D;
+      --text-faint: #636366;
+      --accent:     #0A84FF;
+      --accent-ink: #FFFFFF;
+      --good:       #30D158;
+      --warn:       #FF453A;
+      --nav-bg:     rgba(28,28,30,0.86);
+      --c-kcal:     #FF9F0A;
+      --c-prot:     #FF453A;
+      --c-gluc:     #FFD60A;
+      --c-lip:      #BF5AF2;
+      --c-fib:      #30D158;
+      --c-poids:    #5E5CE6;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink:        #000000;
+    --surface:    #1C1C1E;
+    --surface-2:  #141416;
+    --hairline:   #38383A;
+    --text:       #FFFFFF;
+    --text-muted: #98989D;
+    --text-faint: #636366;
+    --accent:     #0A84FF;
+    --accent-ink: #FFFFFF;
+    --good:       #30D158;
+    --warn:       #FF453A;
+    --nav-bg:     rgba(28,28,30,0.86);
+    --c-kcal:     #FF9F0A;
+    --c-prot:     #FF453A;
+    --c-gluc:     #FFD60A;
+    --c-lip:      #BF5AF2;
+    --c-fib:      #30D158;
+    --c-poids:    #5E5CE6;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  @supports (height: 100dvh) {
+    html, body { height: 100dvh; }
+  }
+  body {
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    overscroll-behavior-y: none;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  a { color: inherit; }
+
+  /* ---------- App shell ---------- */
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--ink);
+    overflow: hidden;
+  }
+
+  header.top {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 5;
+    background: var(--ink);
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--hairline);
+    flex-shrink: 0;
+  }
+  header.top .eyebrow {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0 0 2px;
+  }
+  header.top h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 28px;
+    letter-spacing: 0.2px;
+    margin: 0;
+    line-height: 1.05;
+  }
+
+  main#page {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 20px calc(112px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ---------- Bottom nav ---------- */
+  nav.tabbar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 10;
+    background: var(--nav-bg);
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    border-top: 0.5px solid var(--hairline);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  nav.tabbar .row {
+    max-width: 480px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
+  nav.tabbar button {
+    appearance: none;
+    background: none;
+    border: none;
+    padding: 10px 4px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-faint);
+    cursor: pointer;
+  }
+  nav.tabbar button svg {
+    width: 24px; height: 24px;
+    stroke: var(--text-faint);
+    fill: none;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: stroke 0.15s ease;
+  }
+  nav.tabbar button.active {
+    color: var(--text);
+  }
+  nav.tabbar button.active svg {
+    stroke: var(--accent);
+  }
+  nav.tabbar button:active { opacity: 0.6; }
+
+  /* ---------- Generic building blocks ---------- */
+  .section-label {
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    margin: 24px 0 8px;
+    padding: 0 4px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  .field {
+    background: var(--surface);
+    border: none;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .field .label {
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .field .hint {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .field .input-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .field input[type="number"] {
+    width: 84px;
+    text-align: right;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--text);
+    background: none;
+    border: none;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+  .field input[type="number"]::-webkit-outer-spin-button,
+  .field input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+  }
+  .field .unit {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .field.past {
+    opacity: 0.7;
+  }
+  .field.past .past-kcal {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--text-muted);
+  }
+
+  .btn {
+    appearance: none;
+    border: none;
+    background: var(--surface);
+    color: var(--accent);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 16px;
+    padding: 13px 18px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+  }
+  .btn:active { opacity: 0.5; }
+  .btn.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { flex: 1; }
+
+  .status-msg {
+    font-size: 13px;
+    text-align: center;
+    padding: 10px 0 2px;
+    min-height: 32px;
+    color: var(--text-muted);
+  }
+  .status-msg.good { color: var(--good); }
+  .status-msg.warn { color: var(--warn); }
+
+  .backup-indicator { text-align: center; }
+  .backup-indicator.warn { color: var(--warn); font-weight: 600; }
+
+  .warn-inline {
+    color: var(--warn);
+    font-size: 12.5px;
+    margin: -4px 0 10px;
+    padding: 0 2px;
+  }
+  .field.field-error input {
+    color: var(--warn);
+  }
+  .field.field-error {
+    border-color: var(--warn);
+  }
+
+  input[type="file"] { display: none; }
+
+  /* ---------- Segmented control ---------- */
+  .segmented {
+    display: flex;
+    background: var(--surface-2);
+    border: none;
+    border-radius: var(--radius);
+    padding: 2px;
+    margin-bottom: 14px;
+    gap: 2px;
+  }
+  .segmented button {
+    appearance: none;
+    background: none;
+    border: none;
+    flex: 1;
+    padding: 8px 6px;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+  }
+  .segmented button.active {
+    background: var(--surface);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 1px rgba(0,0,0,0.08);
+  }
+
+  /* ---------- Item list (Aliments/Plats/Boissons) ---------- */
+  .item-card .input-wrap { position: relative; padding-right: 26px; }
+  .delete-btn {
+    appearance: none;
+    background: none;
+    border: none;
+    position: absolute;
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-faint);
+    font-size: 15px;
+    padding: 8px;
+    cursor: pointer;
+  }
+  .delete-btn:active { color: var(--warn); }
+
+  .list-card {
+    position: relative;
+    margin-bottom: 10px;
+  }
+  .item-card-main {
+    appearance: none;
+    width: 100%;
+    background: var(--surface);
+    border: none;
+    border-radius: var(--radius);
+    padding: 14px 40px 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .item-card-main:active { opacity: 0.7; }
+  .item-card-left { flex: 1; min-width: 0; }
+  .item-card-left .label { margin-bottom: 6px; }
+  .item-card-right { flex-shrink: 0; padding-top: 1px; }
+  .portion-big {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 19px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .chip-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    scrollbar-width: none;
+    padding-bottom: 1px;
+  }
+  .chip-row::-webkit-scrollbar { display: none; }
+  .chip-row.scrollable {
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 18px), transparent 100%);
+    mask-image: linear-gradient(to right, black calc(100% - 18px), transparent 100%);
+  }
+  .chip { display: flex; flex-direction: column; flex-shrink: 0; white-space: nowrap; }
+  .chip .v {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14.5px;
+    color: var(--text);
+    line-height: 1.25;
+  }
+  .chip .l {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    line-height: 1.2;
+  }
+  .card-delete {
+    position: absolute;
+    right: 6px;
+    top: 8px;
+  }
+
+  .text-input {
+    width: 100%;
+    background: none;
+    border: none;
+    outline: none;
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--text);
+    padding: 2px 0;
+  }
+
+  /* ---------- Menu déroulant maison (remplace <select>, non stylable sur iOS) ---------- */
+  .custom-select {
+    margin-bottom: 10px;
+  }
+  .custom-select .select-trigger {
+    width: 100%;
+    text-align: left;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    margin-bottom: 0;
+  }
+  .custom-select .trigger-value {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .custom-select .chevron {
+    color: var(--text-muted);
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+  }
+  .custom-select .chevron.open {
+    transform: rotate(180deg);
+  }
+  .select-options {
+    background: var(--surface);
+    border: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);
+    border-radius: var(--radius);
+    margin: -4px 0 10px;
+    overflow: hidden;
+  }
+  .select-options[hidden] { display: none; }
+  .select-options button {
+    appearance: none;
+    -webkit-appearance: none;
+    background: none;
+    border: none;
+    border-top: 1px solid var(--hairline);
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    font-family: var(--font-body);
+    font-size: 14.5px;
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .select-options button:first-child { border-top: none; }
+  .select-options button.selected {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .select-options button .check { color: var(--accent); }
+
+  /* ---------- Regroupement nutriment parent / "dont" ---------- */
+  .nutrient-group {
+    border: none;
+    border-radius: var(--radius);
+    background: var(--surface);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .nutrient-group .field {
+    border: none;
+    border-radius: 0;
+    margin-bottom: 0;
+  }
+  .nutrient-group .field.sub {
+    padding-left: 30px;
+    border-top: 1px solid var(--hairline);
+    background: var(--surface-2);
+    position: relative;
+  }
+  .nutrient-group .field.sub::before {
+    content: "↳";
+    position: absolute;
+    left: 12px;
+    color: var(--text-faint);
+    font-size: 13px;
+  }
+  .nutrient-group .field.sub .label {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .nutrient-group .field.sub input {
+    font-size: 17px;
+  }
+
+  /* ---------- Modal (bottom sheet) ---------- */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 20;
+    display: none;
+    align-items: flex-end;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal-sheet {
+    background: var(--ink);
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    max-height: 88vh;
+    max-height: 88dvh;
+    border-radius: 18px 18px 0 0;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--hairline);
+    flex-shrink: 0;
+  }
+  .modal-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+  }
+  .modal-close {
+    appearance: none;
+    background: var(--surface-2);
+    border: none;
+    color: var(--text-muted);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .modal-body {
+    padding: 4px 18px 24px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ---------- Calendrier ---------- */
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .cal-month-label {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 19px;
+    text-transform: capitalize;
+  }
+  .cal-nav-btn {
+    appearance: none;
+    background: var(--surface-2);
+    border: none;
+    color: var(--accent);
+    width: 36px; height: 36px;
+    border-radius: var(--radius);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .cal-nav-btn:active { opacity: 0.6; }
+
+  .cal-grid { }
+  .cal-head, .cal-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+  }
+  .cal-head span {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-faint);
+    padding-bottom: 8px;
+    display: block;
+  }
+  .cal-row { margin-bottom: 5px; }
+  .cal-cell {
+    appearance: none;
+    background: var(--surface);
+    border: none;
+    border-radius: 9px;
+    width: 100%;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text);
+    cursor: pointer;
+    padding: 0;
+  }
+  .cal-cell.empty {
+    background: none;
+    border: none;
+    cursor: default;
+  }
+  .cal-cell.today {
+    border: 2px solid var(--accent);
+    font-weight: 700;
+  }
+  .cal-cell.selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 700;
+  }
+  .cal-cell .status-bar {
+    position: absolute;
+    bottom: 0; left: 4px; right: 4px;
+    height: 3px;
+    border-radius: 2px 2px 0 0;
+  }
+  .cal-cell .status-bar.met { background: var(--good); }
+  .cal-cell .status-bar.unmet { background: var(--warn); }
+  .cal-cell .weight-icon {
+    position: absolute;
+    top: 3px; right: 3px;
+    color: var(--accent);
+    opacity: 0.9;
+    line-height: 0;
+  }
+  .cal-cell.selected .weight-icon { color: var(--accent-ink); }
+
+  .btn-today {
+    appearance: none;
+    background: var(--surface-2);
+    border: none;
+    color: var(--accent);
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin: 0 0 14px auto;
+    display: block;
+    cursor: pointer;
+  }
+  .btn-today:active { opacity: 0.6; }
+
+  /* ---------- Objectifs summary strip ---------- */
+  .obj-total {
+    background: var(--surface-2);
+    border: none;
+    border-radius: var(--radius);
+    padding: 18px 18px 16px;
+    margin-bottom: 22px;
+  }
+  .obj-total .kcal-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .obj-total .kcal-row .num {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 44px;
+    color: var(--c-kcal);
+    line-height: 1;
+  }
+  .obj-total .kcal-row .unit {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .obj-total .kcal-sub {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .obj-total .split {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--hairline);
+  }
+  .obj-total .split .cell {
+    flex: 1;
+    min-width: 0;
+  }
+  .obj-total .split .cell .n {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .u-plain {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .obj-total .split .cell .l {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+  /* Même ordre partout (Protéines, Glucides, Lipides, Fibres) : une seule règle
+     harmonise les couleurs entre Objectifs, Calendrier et, plus tard, Accueil. */
+  .obj-total .split .cell:nth-child(1) .n { color: var(--c-prot); }
+  .obj-total .split .cell:nth-child(2) .n { color: var(--c-gluc); }
+  .obj-total .split .cell:nth-child(3) .n { color: var(--c-lip); }
+  .obj-total .split .cell:nth-child(4) .n { color: var(--c-fib); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="top">
+    <p class="eyebrow" id="today-label">—</p>
+    <h1 id="header-title">Carnet</h1>
+  </header>
+
+  <main id="page"></main>
+
+  <nav class="tabbar">
+    <div class="row">
+      <button data-tab="accueil" class="tab-btn">
+        <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/></svg>
+        <span>Accueil</span>
+      </button>
+      <button data-tab="calendrier" class="tab-btn">
+        <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="1.5"/><path d="M3.5 9.5h17"/><path d="M8 3v4M16 3v4"/></svg>
+        <span>Calendrier</span>
+      </button>
+      <button data-tab="aliments" class="tab-btn">
+        <svg viewBox="0 0 24 24"><path d="M6 3v8a2 2 0 0 0 4 0V3M8 11v10"/><path d="M16 3c-1.5 0-2.5 1.8-2.5 4.5S14.5 12 16 12s2.5-1.8 2.5-4.5S17.5 3 16 3Z"/><path d="M16 12v9"/></svg>
+        <span>Aliments</span>
+      </button>
+      <button data-tab="objectifs" class="tab-btn">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.25"/><circle cx="12" cy="12" r="4.25"/><circle cx="12" cy="12" r="0.75" fill="currentColor" stroke="none"/></svg>
+        <span>Objectifs</span>
+      </button>
+    </div>
+  </nav>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ============ Storage ============
+  var STORAGE_KEY = "carnetNutritionData_v1";
+
+  function todayISO() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+
+  function formatDateFR(isoDateStr) {
+    var parts = isoDateStr.split("-");
+    return parts[2] + "/" + parts[1] + "/" + parts[0];
+  }
+
+  function addDaysISO(isoDateStr, n) {
+    var d = new Date(isoDateStr + "T00:00:00");
+    d.setDate(d.getDate() + n);
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+
+  function freshData() {
+    return {
+      objectifsHistory: [
+        { depuis: todayISO(), kcal: 2900, proteines: 144, glucides: 376, lipides: 89, fibres: 35 }
+      ],
+      aliments: [],
+      plats: [],
+      boissons: [],
+      journal: {},
+      poids: []
+    };
+  }
+
+  function loadData() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return freshData();
+      var parsed = JSON.parse(raw);
+      var merged = Object.assign(freshData(), parsed);
+
+      // Migration depuis l'ancien format (une seule valeur "objectifs", sans historique)
+      if (!merged.objectifsHistory || !merged.objectifsHistory.length) {
+        var legacy = parsed.objectifs || freshData().objectifsHistory[0];
+        merged.objectifsHistory = [Object.assign({ depuis: "2020-01-01" }, legacy)];
+      }
+      merged.objectifsHistory.sort(function (a, b) {
+        return a.depuis < b.depuis ? -1 : (a.depuis > b.depuis ? 1 : 0);
+      });
+      // Compatibilité ascendante : les versions enregistrées avant l'ajout des fibres n'ont pas ce champ.
+      merged.objectifsHistory.forEach(function (v) {
+        if (typeof v.fibres !== "number") v.fibres = 35;
+      });
+      delete merged.objectifs;
+      return merged;
+    } catch (e) {
+      console.warn("Lecture localStorage impossible, valeurs par défaut utilisées.", e);
+      return freshData();
+    }
+  }
+
+  // Renvoie l'objectif en vigueur à une date donnée (AAAA-MM-JJ) : la version la
+  // plus récente dont la date de départ est antérieure ou égale à cette date.
+  function getObjectifsForDate(dateStr) {
+    var hist = state.data.objectifsHistory;
+    var applicable = hist[0];
+    for (var i = 0; i < hist.length; i++) {
+      if (hist[i].depuis <= dateStr) applicable = hist[i]; else break;
+    }
+    return applicable;
+  }
+  function getCurrentObjectifs() {
+    return getObjectifsForDate(todayISO());
+  }
+
+  function saveData() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+      return true;
+    } catch (e) {
+      console.warn("Écriture localStorage impossible.", e);
+      return false;
+    }
+  }
+
+  var state = {
+    data: loadData(),
+    tab: "accueil"
+  };
+
+  // Demande à iOS/le navigateur de traiter ce stockage comme "protégé"
+  // (réduit le risque d'éviction automatique en cas de pression sur l'espace disque).
+  // Sans effet visible, jamais bloquant si indisponible.
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().catch(function () {});
+  }
+
+  // ============ Date helpers ============
+  var JOURS = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+  var JOURS_COURT = ["L","M","M","J","V","S","D"];
+  var MOIS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+  var REPAS = ["Petit-déjeuner", "Déjeuner", "Dîner", "Collation", "Sport", "Hydratation"];
+  function formatToday() {
+    var d = new Date();
+    return JOURS[d.getDay()] + " " + d.getDate() + " " + MOIS[d.getMonth()];
+  }
+
+  var calState = {
+    year: new Date().getFullYear(),
+    month: new Date().getMonth(), // 0-indexé
+    selected: todayISO()
+  };
+
+  // ============ Capabilities (downloads) ============
+  var downloadsApi = null;
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("downloads").then(function (ns) { downloadsApi = ns; }).catch(function () { downloadsApi = null; });
+  }
+
+  // ============ Render: shell ============
+  function renderShell() {
+    var header = document.querySelector("header.top");
+    if (state.tab === "calendrier" || state.tab === "aliments" || state.tab === "accueil" || state.tab === "objectifs") {
+      header.style.display = "none";
+    } else {
+      header.style.display = "";
+      document.getElementById("today-label").textContent = formatToday();
+      var titles = { accueil: "Carnet", calendrier: "Calendrier", aliments: "Aliments & plats", objectifs: "Objectifs" };
+      document.getElementById("header-title").textContent = titles[state.tab] || "Carnet";
+    }
+    document.querySelectorAll(".tab-btn").forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-tab") === state.tab);
+    });
+  }
+
+  function setTab(tab) {
+    state.tab = tab;
+    renderShell();
+    renderPage();
+    document.getElementById("page").scrollTop = 0;
+  }
+
+  document.querySelectorAll(".tab-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () { setTab(btn.getAttribute("data-tab")); });
+  });
+
+  // ============ Render: pages ============
+  function renderPage() {
+    var page = document.getElementById("page");
+    if (state.tab === "objectifs") {
+      page.innerHTML = objectifsHTML();
+      wireObjectifs();
+    } else if (state.tab === "calendrier") {
+      page.innerHTML = calendrierHTML();
+      wireCalendrier();
+    } else if (state.tab === "aliments") {
+      page.innerHTML = aliementsHTML();
+      wireAliments();
+    } else if (state.tab === "accueil") {
+      page.innerHTML = accueilHTML();
+      wireAccueil();
+    }
+  }
+
+  // ============ Accueil ============
+  function getLastWeight() {
+    var p = state.data.poids;
+    if (!p.length) return null;
+    return p.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; })[0];
+  }
+
+  function ringsSVG(rings) {
+    var sw = 15;
+    var svg = '<svg viewBox="0 0 200 200" width="180" height="180" style="display:block; margin:0 auto;">';
+    rings.forEach(function (ring) {
+      var c = 2 * Math.PI * ring.r;
+      var progress = Math.min(Math.max(ring.pct, 0), 1);
+      var offset = c * (1 - progress);
+      svg += '<circle cx="100" cy="100" r="' + ring.r + '" fill="none" style="stroke:var(--surface-2)" stroke-width="' + sw + '"></circle>';
+      if (progress > 0) {
+        svg += '<circle cx="100" cy="100" r="' + ring.r + '" fill="none" style="stroke:' + ring.color + '" stroke-width="' + sw +
+          '" stroke-linecap="round" stroke-dasharray="' + c.toFixed(1) + '" stroke-dashoffset="' + offset.toFixed(1) +
+          '" transform="rotate(-90 100 100)"></circle>';
+      }
+    });
+    svg += '</svg>';
+    return svg;
+  }
+
+  function dailyRingsHTML(date, entries) {
+    var obj = getObjectifsForDate(date);
+    var totals = { kcal: 0, glucides: 0, lipides: 0 };
+    entries.forEach(function (e) {
+      totals.kcal += e.kcal || 0; totals.glucides += e.glucides || 0; totals.lipides += e.lipides || 0;
+    });
+
+    var rings = [
+      { r: 82, color: "var(--c-kcal)", pct: obj.kcal ? totals.kcal / obj.kcal : 0 },
+      { r: 62, color: "var(--c-gluc)", pct: obj.glucides ? totals.glucides / obj.glucides : 0 },
+      { r: 42, color: "var(--c-lip)", pct: obj.lipides ? totals.lipides / obj.lipides : 0 }
+    ];
+
+    var legend = [
+      { label: "Calories", color: "var(--c-kcal)", val: Math.round(totals.kcal), obj: obj.kcal, unit: "kcal" },
+      { label: "Glucides", color: "var(--c-gluc)", val: Math.round(totals.glucides), obj: obj.glucides, unit: "g" },
+      { label: "Lipides", color: "var(--c-lip)", val: Math.round(totals.lipides), obj: obj.lipides, unit: "g" }
+    ].map(function (l) {
+      return '<div style="text-align:center; flex:1;">' +
+        '<div style="width:9px; height:9px; border-radius:50%; background:' + l.color + '; margin:0 auto 4px;"></div>' +
+        '<div style="font-family:var(--font-display); font-weight:700; font-size:15px; color:' + l.color + ';">' + l.val + '<span class="u-plain" style="font-size:12px;"> ' + l.unit + '</span></div>' +
+        '<div class="hint">/ ' + l.obj + ' ' + l.unit + '</div>' +
+      '</div>';
+    }).join("");
+
+    return (
+      '<div class="obj-total" style="margin-top:14px; display:flex; flex-direction:column; align-items:center;">' +
+        ringsSVG(rings) +
+        '<div style="display:flex; width:100%; margin-top:8px;">' + legend + '</div>' +
+      '</div>'
+    );
+  }
+
+  function accueilHTML() {
+    var last = getLastWeight();
+    var date = todayISO();
+    var todayWeight = last && last.date === date ? last : null;
+    var entries = state.data.journal[date] || [];
+
+    var listHTML = "";
+    if (!entries.length) {
+      listHTML = '<p class="hint" style="text-align:center; padding:20px 10px;">Rien d\'enregistré aujourd\'hui.</p>';
+    } else {
+      entries.forEach(function (e, idx) {
+        listHTML += '<div class="field item-card">' +
+          '<div><div class="label">' + e.nom + '</div><div class="hint">' + e.repas + ' · ×' + e.quantite + '</div></div>' +
+          '<div class="input-wrap"><span class="past-kcal">' + Math.round(e.kcal || 0) + '</span><span class="unit">kcal</span>' +
+          '<button class="delete-btn journal-remove-btn" data-idx="' + idx + '" aria-label="Retirer">✕</button></div>' +
+        '</div>';
+      });
+    }
+
+    return (
+      '<h1 style="font-family:var(--font-display); font-size:28px; font-weight:700; margin:4px 0 20px;">Ma journée</h1>' +
+
+      '<p class="section-label" style="margin-top:0;">Poids</p>' +
+      '<div class="field">' +
+        '<div>' +
+          '<div class="label" style="color:var(--c-poids);">Pesée du jour</div>' +
+          '<div class="hint">' + (todayWeight ? "Enregistrée aujourd'hui" : "Aucune pesée aujourd'hui") + '</div>' +
+        '</div>' +
+        (todayWeight ? '<div class="input-wrap"><span class="past-kcal" style="color:var(--c-poids);">' + todayWeight.kg + '</span><span class="unit">kg</span></div>' : '') +
+      '</div>' +
+      '<button class="btn primary" id="btn-add-weight" style="margin-top:2px;">Ajouter une pesée</button>' +
+
+      dailyRingsHTML(date, entries) +
+
+      '<p class="section-label">Ajouter</p>' +
+      '<div class="btn-row" style="margin-bottom:14px;">' +
+        '<button class="btn primary" id="btn-add-aliments">Aliment</button>' +
+        '<button class="btn primary" id="btn-add-plats">Plat</button>' +
+        '<button class="btn primary" id="btn-add-boissons">Boisson</button>' +
+      '</div>' +
+
+      '<p class="section-label">Aujourd\'hui</p>' +
+      '<div id="accueil-list">' + listHTML + '</div>' +
+
+      weightModalHTML() +
+      typeListModalHTML(aState.typeModalOpen || "aliments")
+    );
+  }
+
+  function weightModalHTML() {
+    return (
+      '<div class="modal-backdrop ' + (aState.weightModalOpen ? "open" : "") + '" id="weight-modal-backdrop">' +
+        '<div class="modal-sheet">' +
+          '<div class="modal-head">' +
+            '<span class="modal-title">Ajouter une pesée</span>' +
+            '<button class="modal-close" id="weight-modal-close" aria-label="Fermer">✕</button>' +
+          '</div>' +
+          '<div class="modal-body">' +
+            '<p class="section-label" style="margin-top:6px;">Date</p>' +
+            '<div class="field"><input type="date" id="w-date" class="text-input" value="' + todayISO() + '" max="' + todayISO() + '"></div>' +
+            '<p class="section-label">Poids</p>' +
+            '<div class="field">' +
+              '<div class="label" style="color:var(--c-poids);">Poids</div>' +
+              '<div class="input-wrap"><input type="number" id="w-kg" inputmode="decimal" step="0.1" placeholder="0"><span class="unit">kg</span></div>' +
+            '</div>' +
+            '<button class="btn primary" id="w-save" style="margin-top:8px;">Enregistrer</button>' +
+            '<p class="status-msg" id="w-status"></p>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  var TYPE_LABELS = { aliments: "aliments", plats: "plats", boissons: "boissons" };
+  var TYPE_SINGULAR = { aliments: "aliment", plats: "plat", boissons: "boisson" };
+  var TYPE_ENTRY_LABEL = { aliments: "Aliment", plats: "Plat", boissons: "Boisson" };
+
+  function typeListModalHTML(type) {
+    var isOpen = !!aState.typeModalOpen;
+    var repasOptions = REPAS.map(function (r) { return { value: r, label: r }; });
+    var pickedRepas = aState.mealRepas || REPAS[0];
+
+    // ---- Vue sélecteur : liste tapable de tous les éléments de ce type ----
+    if (aState.pickerMode) {
+      var list = state.data[type] || [];
+      var rowsHTML = list.length ?
+        list.map(function (item) {
+          return '<button type="button" class="field picker-row" data-item-id="' + item.id + '" style="width:100%; text-align:left; appearance:none; cursor:pointer;">' +
+            '<div class="label">' + item.nom + '</div>' +
+          '</button>';
+        }).join("") :
+        '<p class="hint">Aucun élément dans "' + TYPE_LABELS[type] + '". Ajoute-en depuis l\'onglet Aliments.</p>';
+
+      return (
+        '<div class="modal-backdrop ' + (isOpen ? "open" : "") + '" id="typelist-modal-backdrop">' +
+          '<div class="modal-sheet">' +
+            '<div class="modal-head">' +
+              '<span class="modal-title">Choisir un ' + TYPE_SINGULAR[type] + '</span>' +
+              '<button class="modal-close" id="typelist-modal-close" aria-label="Retour">‹</button>' +
+            '</div>' +
+            '<div class="modal-body">' + rowsHTML + '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
+    // ---- Vue principale : éléments déjà choisis + bouton pour en ajouter ----
+    var stagedHTML = "";
+    if (!aState.stagedItems.length) {
+      stagedHTML = '<p class="hint">Aucun élément choisi pour l\'instant.</p>';
+    } else {
+      stagedHTML = aState.stagedItems.map(function (s, idx) {
+        return '<div class="field">' +
+          '<div class="label">' + s.nom + '</div>' +
+          '<div class="input-wrap"><input type="number" class="staged-qty-input" data-idx="' + idx + '" inputmode="decimal" step="0.1" value="' + s.quantite + '"><span class="unit">×</span>' +
+          '<button class="delete-btn staged-remove-btn" data-idx="' + idx + '" aria-label="Retirer">✕</button></div>' +
+        '</div>';
+      }).join("");
+    }
+
+    return (
+      '<div class="modal-backdrop ' + (isOpen ? "open" : "") + '" id="typelist-modal-backdrop">' +
+        '<div class="modal-sheet">' +
+          '<div class="modal-head">' +
+            '<span class="modal-title">Ajouter des ' + TYPE_LABELS[type] + '</span>' +
+            '<button class="modal-close" id="typelist-modal-close" aria-label="Fermer">✕</button>' +
+          '</div>' +
+          '<div class="modal-body">' +
+            '<p class="section-label" style="margin-top:6px;">Date</p>' +
+            '<div class="field"><input type="date" id="typelist-date" class="text-input" value="' + (aState.mealDate || todayISO()) + '" max="' + todayISO() + '"></div>' +
+            '<p class="section-label">Type de repas</p>' +
+            customSelectHTML("typelist-repas-pick", null, repasOptions, pickedRepas) +
+            '<p class="section-label">Éléments choisis</p>' +
+            stagedHTML +
+            '<button type="button" class="btn" id="typelist-open-picker" style="margin:6px 0 14px; border:1px dashed var(--hairline);">Ajouter un élément</button>' +
+            '<button class="btn primary" id="typelist-save">Ajouter au journal</button>' +
+            '<p class="status-msg" id="typelist-status"></p>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function wireAccueil() {
+    document.getElementById("btn-add-weight").addEventListener("click", function () {
+      aState.weightModalOpen = true;
+      rerenderWeightModal();
+    });
+    ["aliments", "plats", "boissons"].forEach(function (type) {
+      document.getElementById("btn-add-" + type).addEventListener("click", function () {
+        openTypeListModal(type);
+      });
+    });
+    document.querySelectorAll(".journal-remove-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var idx = parseInt(btn.getAttribute("data-idx"), 10);
+        state.data.journal[todayISO()].splice(idx, 1);
+        saveData();
+        renderPage();
+      });
+    });
+    wireWeightModal();
+    wireTypeListModal();
+  }
+
+  function closeWeightModal() {
+    aState.weightModalOpen = false;
+    rerenderWeightModal();
+  }
+
+  function rerenderWeightModal() {
+    var existing = document.getElementById("weight-modal-backdrop");
+    if (existing) existing.outerHTML = weightModalHTML();
+    wireWeightModal();
+  }
+
+  function wireWeightModal() {
+    var backdrop = document.getElementById("weight-modal-backdrop");
+    if (!backdrop) return;
+    document.getElementById("weight-modal-close").addEventListener("click", closeWeightModal);
+    backdrop.addEventListener("click", function (e) { if (e.target === backdrop) closeWeightModal(); });
+
+    document.getElementById("w-save").addEventListener("click", function () {
+      var st = document.getElementById("w-status");
+      var date = document.getElementById("w-date").value;
+      var kg = parseFloat(document.getElementById("w-kg").value);
+      if (!date) { st.textContent = "Choisis une date."; st.className = "status-msg warn"; return; }
+      if (!kg || kg <= 0) { st.textContent = "Renseigne un poids valide."; st.className = "status-msg warn"; return; }
+      kg = Math.round(kg * 10) / 10;
+
+      var existing = state.data.poids.find(function (p) { return p.date === date; });
+      if (existing) existing.kg = kg;
+      else state.data.poids.push({ date: date, kg: kg });
+      state.data.poids.sort(function (a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+      saveData();
+      closeWeightModal();
+      renderPage();
+    });
+  }
+
+  function openTypeListModal(type) {
+    aState.typeModalOpen = type;
+    aState.mealRepas = aState.mealRepas || REPAS[0];
+    aState.mealDate = todayISO();
+    aState.stagedItems = [];
+    aState.pickerMode = false;
+    rerenderTypeListModal();
+  }
+
+  function closeTypeListModal() {
+    aState.typeModalOpen = null;
+    aState.pickerMode = false;
+    rerenderTypeListModal();
+  }
+
+  function rerenderTypeListModal() {
+    var existing = document.getElementById("typelist-modal-backdrop");
+    if (existing) existing.outerHTML = typeListModalHTML(aState.typeModalOpen || "aliments");
+    wireTypeListModal();
+  }
+
+  function wireTypeListModal() {
+    var backdrop = document.getElementById("typelist-modal-backdrop");
+    if (!backdrop) return;
+
+    // En mode sélecteur, le bouton "fermer" ramène à la vue principale plutôt que de tout fermer.
+    document.getElementById("typelist-modal-close").addEventListener("click", function () {
+      if (aState.pickerMode) { aState.pickerMode = false; rerenderTypeListModal(); }
+      else closeTypeListModal();
+    });
+    backdrop.addEventListener("click", function (e) {
+      if (e.target !== backdrop) return;
+      if (aState.pickerMode) { aState.pickerMode = false; rerenderTypeListModal(); }
+      else closeTypeListModal();
+    });
+
+    if (aState.pickerMode) {
+      document.querySelectorAll(".picker-row").forEach(function (row) {
+        row.addEventListener("click", function () {
+          var id = row.getAttribute("data-item-id");
+          var item = (state.data[aState.typeModalOpen] || []).find(function (it) { return it.id === id; });
+          if (!item) return;
+          var already = aState.stagedItems.find(function (s) { return s.id === id; });
+          if (!already) aState.stagedItems.push({ id: id, nom: item.nom, quantite: 1 });
+          aState.pickerMode = false;
+          rerenderTypeListModal();
+        });
+      });
+      return;
+    }
+
+    var dateEl = document.getElementById("typelist-date");
+    if (dateEl) dateEl.addEventListener("change", function (e) { aState.mealDate = e.target.value || todayISO(); });
+
+    wireCustomSelects({
+      "typelist-repas-pick": function (value) { aState.mealRepas = value; }
+    }, rerenderTypeListModal);
+
+    document.getElementById("typelist-open-picker").addEventListener("click", function () {
+      aState.pickerMode = true;
+      rerenderTypeListModal();
+    });
+
+    document.querySelectorAll(".staged-qty-input").forEach(function (inp) {
+      inp.addEventListener("input", function () {
+        var idx = parseInt(inp.getAttribute("data-idx"), 10);
+        aState.stagedItems[idx].quantite = inp.value;
+      });
+    });
+    document.querySelectorAll(".staged-remove-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var idx = parseInt(btn.getAttribute("data-idx"), 10);
+        aState.stagedItems.splice(idx, 1);
+        rerenderTypeListModal();
+      });
+    });
+
+    var saveBtn = document.getElementById("typelist-save");
+    if (!saveBtn) return;
+    saveBtn.addEventListener("click", function () {
+      var st = document.getElementById("typelist-status");
+      var type = aState.typeModalOpen;
+      var date = aState.mealDate || todayISO();
+      var repas = aState.mealRepas || REPAS[0];
+      var list = state.data[type] || [];
+      if (!aState.stagedItems.length) { st.textContent = "Choisis au moins un élément."; st.className = "status-msg warn"; return; }
+      var added = 0;
+      aState.stagedItems.forEach(function (s) {
+        var factor = parseFloat(s.quantite);
+        if (!factor || factor <= 0) return;
+        var item = list.find(function (it) { return it.id === s.id; });
+        if (!item) return;
+        var entry = { repas: repas, nom: item.nom, type: TYPE_ENTRY_LABEL[type], quantite: factor };
+        NUTRIENT_KEYS.forEach(function (k) { entry[k] = Math.round((item[k] || 0) * factor * 10) / 10; });
+        if (!state.data.journal[date]) state.data.journal[date] = [];
+        state.data.journal[date].push(entry);
+        added++;
+      });
+      if (!added) { st.textContent = "Indique une quantité valide pour au moins un élément."; st.className = "status-msg warn"; return; }
+      saveData();
+      closeTypeListModal();
+      renderPage();
+    });
+  }
+
+  function objectifsHTML() {
+    var o = getCurrentObjectifs();
+    var hist = state.data.objectifsHistory;
+    var pastEntries = hist.slice(0, hist.length - 1).reverse(); // plus récent d'abord
+
+    var historiqueHTML = "";
+    if (pastEntries.length) {
+      historiqueHTML += '<p class="section-label">Historique</p>';
+      pastEntries.forEach(function (entry, idx) {
+        // date de fin = veille du début de la version suivante dans le temps
+        var nextStart = idx === 0 ? o.depuis : pastEntries[idx - 1].depuis;
+        var endLabel = formatDateFR(addDaysISO(nextStart, -1));
+        historiqueHTML +=
+          '<div class="field past">' +
+            '<div>' +
+              '<div class="label">' + formatDateFR(entry.depuis) + ' → ' + endLabel + '</div>' +
+              '<div class="hint">' + entry.proteines + ' g P · ' + entry.glucides + ' g G · ' + entry.lipides + ' g L · ' + entry.fibres + ' g Fib.</div>' +
+            '</div>' +
+            '<div class="input-wrap"><span class="past-kcal">' + entry.kcal + '</span><span class="unit">kcal</span></div>' +
+          '</div>';
+      });
+    }
+
+    return (
+      '<div class="obj-total">' +
+        '<div class="kcal-row"><span class="num" id="obj-kcal-preview">' + o.kcal + '</span><span class="unit">kcal / jour</span></div>' +
+        '<p class="kcal-sub">En vigueur depuis le ' + formatDateFR(o.depuis) + '</p>' +
+        '<div class="split">' +
+          '<div class="cell"><div class="n" id="obj-prot-preview">' + o.proteines + '<span class="u-plain"> g</span></div><div class="l">Protéines</div></div>' +
+          '<div class="cell"><div class="n" id="obj-gluc-preview">' + o.glucides + '<span class="u-plain"> g</span></div><div class="l">Glucides</div></div>' +
+          '<div class="cell"><div class="n" id="obj-lip-preview">' + o.lipides + '<span class="u-plain"> g</span></div><div class="l">Lipides</div></div>' +
+          '<div class="cell"><div class="n" id="obj-fib-preview">' + o.fibres + '<span class="u-plain"> g</span></div><div class="l">Fibres</div></div>' +
+        '</div>' +
+      '</div>' +
+
+      '<p class="section-label">Objectifs quotidiens</p>' +
+
+      '<div class="field">' +
+        '<div class="label" style="color:var(--c-kcal);">Calories</div>' +
+        '<div class="input-wrap"><input type="number" id="in-kcal" inputmode="numeric" value="' + o.kcal + '"><span class="unit">kcal</span></div>' +
+      '</div>' +
+      '<div class="field">' +
+        '<div class="label" style="color:var(--c-prot);">Protéines</div>' +
+        '<div class="input-wrap"><input type="number" id="in-prot" inputmode="numeric" value="' + o.proteines + '"><span class="unit">g</span></div>' +
+      '</div>' +
+      '<div class="field">' +
+        '<div class="label" style="color:var(--c-gluc);">Glucides</div>' +
+        '<div class="input-wrap"><input type="number" id="in-gluc" inputmode="numeric" value="' + o.glucides + '"><span class="unit">g</span></div>' +
+      '</div>' +
+      '<div class="field">' +
+        '<div class="label" style="color:var(--c-lip);">Lipides</div>' +
+        '<div class="input-wrap"><input type="number" id="in-lip" inputmode="numeric" value="' + o.lipides + '"><span class="unit">g</span></div>' +
+      '</div>' +
+      '<div class="field">' +
+        '<div class="label" style="color:var(--c-fib);">Fibres</div>' +
+        '<div class="input-wrap"><input type="number" id="in-fibres" inputmode="numeric" value="' + o.fibres + '"><span class="unit">g</span></div>' +
+      '</div>' +
+
+      historiqueHTML +
+
+      '<p class="section-label">Données</p>' +
+      '<p class="hint backup-indicator" id="backup-indicator" style="margin-bottom:12px;"></p>' +
+
+      '<p class="hint" style="font-weight:600; color:var(--text); margin-bottom:6px;">Exporter</p>' +
+      '<div class="segmented" id="export-scope-toggle">' +
+        '<button class="' + ((aState.exportScope || "tout") === "tout" ? "active" : "") + '" data-scope="tout">Tout</button>' +
+        '<button class="' + (aState.exportScope === "aliments" ? "active" : "") + '" data-scope="aliments">Aliments</button>' +
+        '<button class="' + (aState.exportScope === "plats" ? "active" : "") + '" data-scope="plats">Plats</button>' +
+        '<button class="' + (aState.exportScope === "boissons" ? "active" : "") + '" data-scope="boissons">Boissons</button>' +
+      '</div>' +
+      '<button class="btn" id="btn-export" style="margin-bottom:20px;">Exporter</button>' +
+
+      '<p class="hint" style="font-weight:600; color:var(--text); margin-bottom:6px;">Importer</p>' +
+      '<div class="segmented" id="import-mode-toggle">' +
+        '<button class="' + ((aState.importMode || "ajouter") === "ajouter" ? "active" : "") + '" data-mode="ajouter">Ajouter aux données existantes</button>' +
+        '<button class="' + (aState.importMode === "remplacer" ? "active" : "") + '" data-mode="remplacer">Tout remplacer</button>' +
+      '</div>' +
+      '<button class="btn" id="btn-import">Importer une sauvegarde</button>' +
+      '<input type="file" id="file-import" accept="application/json,.json">' +
+      '<p class="status-msg" id="data-status"></p>'
+    );
+  }
+
+  function wireObjectifs() {
+    var kcal = document.getElementById("in-kcal");
+    var prot = document.getElementById("in-prot");
+    var gluc = document.getElementById("in-gluc");
+    var lip  = document.getElementById("in-lip");
+    var fib  = document.getElementById("in-fibres");
+
+    function persist() {
+      var today = todayISO();
+      var current = getCurrentObjectifs();
+      var newValues = {
+        kcal: clampNum(kcal.value, 0, 9999, current.kcal),
+        proteines: clampNum(prot.value, 0, 999, current.proteines),
+        glucides: clampNum(gluc.value, 0, 999, current.glucides),
+        lipides: clampNum(lip.value, 0, 999, current.lipides),
+        fibres: clampNum(fib.value, 0, 999, current.fibres)
+      };
+      var hist = state.data.objectifsHistory;
+      var todayEntry = null;
+      for (var i = 0; i < hist.length; i++) {
+        if (hist[i].depuis === today) { todayEntry = hist[i]; break; }
+      }
+      if (todayEntry) {
+        Object.assign(todayEntry, newValues);
+      } else {
+        hist.push(Object.assign({ depuis: today }, newValues));
+        hist.sort(function (a, b) { return a.depuis < b.depuis ? -1 : (a.depuis > b.depuis ? 1 : 0); });
+      }
+      saveData();
+      // Re-rendu complet de la page pour mettre à jour l'historique affiché
+      renderPage();
+    }
+    [kcal, prot, gluc, lip, fib].forEach(function (el) {
+      el.addEventListener("change", persist);
+    });
+
+    document.querySelectorAll("#export-scope-toggle button").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        aState.exportScope = btn.getAttribute("data-scope");
+        renderPage();
+      });
+    });
+    document.querySelectorAll("#import-mode-toggle button").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        aState.importMode = btn.getAttribute("data-mode");
+        renderPage();
+      });
+    });
+
+    document.getElementById("btn-export").addEventListener("click", function () {
+      exportData(aState.exportScope || "tout");
+    });
+    document.getElementById("btn-import").addEventListener("click", function () {
+      document.getElementById("file-import").click();
+    });
+    document.getElementById("file-import").addEventListener("change", handleImportFile);
+    renderBackupIndicator();
+  }
+
+  // ============ Calendrier ============
+  function getMonthCells(year, month) {
+    var firstOfMonth = new Date(year, month, 1);
+    var startWeekday = (firstOfMonth.getDay() + 6) % 7; // 0 = lundi
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var cells = [];
+    for (var i = 0; i < startWeekday; i++) cells.push(null);
+    for (var d = 1; d <= daysInMonth; d++) cells.push(d);
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+  }
+
+  var SCALE_ICON = '<svg viewBox="0 0 24 24" width="11" height="11"><rect x="3" y="9" width="18" height="12" rx="2.5" fill="currentColor"/><rect x="9" y="3" width="6" height="6" rx="1.5" fill="currentColor"/></svg>';
+
+  function getDayStatus(dateISO) {
+    var entries = state.data.journal[dateISO];
+    var hasMeal = entries && entries.length > 0;
+    var weight = getWeightForDay(dateISO);
+    var objectiveMet = null;
+    if (hasMeal) {
+      var totalKcal = entries.reduce(function (s, e) { return s + (e.kcal || 0); }, 0);
+      var obj = getObjectifsForDate(dateISO);
+      objectiveMet = totalKcal >= obj.kcal;
+    }
+    return { hasMeal: hasMeal, hasWeight: !!weight, objectiveMet: objectiveMet };
+  }
+
+  function getWeightForDay(dateISO) {
+    for (var i = 0; i < state.data.poids.length; i++) {
+      if (state.data.poids[i].date === dateISO) return state.data.poids[i];
+    }
+    return null;
+  }
+
+  function calendrierHTML() {
+    var cells = getMonthCells(calState.year, calState.month);
+    var weeks = [];
+    for (var i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+    var today = todayISO();
+
+    var grid = '<div class="cal-head">';
+    JOURS_COURT.forEach(function (j) { grid += '<span>' + j + '</span>'; });
+    grid += '</div>';
+
+    weeks.forEach(function (week) {
+      grid += '<div class="cal-row">';
+      week.forEach(function (d) {
+        if (d === null) { grid += '<button class="cal-cell empty" disabled></button>'; return; }
+        var dateISO = calState.year + "-" + String(calState.month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+        var cls = "cal-cell";
+        if (dateISO === today) cls += " today";
+        if (dateISO === calState.selected) cls += " selected";
+        var status = getDayStatus(dateISO);
+        var indicators = "";
+        if (status.hasMeal) {
+          indicators += '<span class="status-bar ' + (status.objectiveMet ? "met" : "unmet") + '"></span>';
+        }
+        if (status.hasWeight) {
+          indicators += '<span class="weight-icon">' + SCALE_ICON + '</span>';
+        }
+        grid += '<button class="' + cls + '" data-date="' + dateISO + '">' + d + indicators + '</button>';
+      });
+      grid += '</div>';
+    });
+
+    return (
+      '<div class="cal-nav">' +
+        '<button class="cal-nav-btn" id="cal-prev" aria-label="Mois précédent">‹</button>' +
+        '<span class="cal-month-label">' + MOIS[calState.month] + ' ' + calState.year + '</span>' +
+        '<button class="cal-nav-btn" id="cal-next" aria-label="Mois suivant">›</button>' +
+      '</div>' +
+      '<button class="btn-today" id="cal-today">Aujourd\'hui</button>' +
+      '<div class="cal-grid">' + grid + '</div>' +
+      '<div id="cal-day-detail">' + dayDetailHTML(calState.selected) + '</div>'
+    );
+  }
+
+  function dayDetailHTML(dateISO) {
+    var d = new Date(dateISO + "T00:00:00");
+    var label = JOURS[d.getDay()] + " " + d.getDate() + " " + MOIS[d.getMonth()] + " " + d.getFullYear();
+    var obj = getObjectifsForDate(dateISO);
+    var entries = state.data.journal[dateISO] || [];
+    var weight = getWeightForDay(dateISO);
+
+    var totalKcal = entries.reduce(function (s, e) { return s + (e.kcal || 0); }, 0);
+    var totalProt = entries.reduce(function (s, e) { return s + (e.proteines || 0); }, 0);
+    var totalGluc = entries.reduce(function (s, e) { return s + (e.glucides || 0); }, 0);
+    var totalLip  = entries.reduce(function (s, e) { return s + (e.lipides || 0); }, 0);
+    var totalFib  = entries.reduce(function (s, e) { return s + (e.fibres || 0); }, 0);
+
+    var html = '<p class="section-label" style="margin-top:26px;">' + label + '</p>';
+
+    html += '<div class="obj-total" style="margin-bottom:16px;">' +
+      '<div class="kcal-row"><span class="num" style="font-size:32px;">' + Math.round(totalKcal) + '</span>' +
+      '<span class="unit">/ ' + obj.kcal + ' kcal visées ce jour-là</span></div>' +
+      '<div class="split">' +
+        '<div class="cell"><div class="n">' + Math.round(totalProt) + ' / ' + obj.proteines + '<span class="u-plain"> g</span></div><div class="l">Protéines</div></div>' +
+        '<div class="cell"><div class="n">' + Math.round(totalGluc) + ' / ' + obj.glucides + '<span class="u-plain"> g</span></div><div class="l">Glucides</div></div>' +
+        '<div class="cell"><div class="n">' + Math.round(totalLip) + ' / ' + obj.lipides + '<span class="u-plain"> g</span></div><div class="l">Lipides</div></div>' +
+        '<div class="cell"><div class="n">' + Math.round(totalFib) + ' / ' + obj.fibres + '<span class="u-plain"> g</span></div><div class="l">Fibres</div></div>' +
+      '</div>' +
+      '</div>';
+
+    html += '<p class="section-label">Pesée</p>';
+    if (weight) {
+      html += '<div class="field item-card"><div class="label" style="color:var(--c-poids);">Poids relevé</div>' +
+        '<div class="input-wrap"><input type="number" class="cal-weight-input" inputmode="decimal" step="0.1" value="' + weight.kg + '" style="width:56px;"><span class="unit">kg</span>' +
+        '<button class="delete-btn cal-weight-remove" aria-label="Supprimer">✕</button></div></div>';
+    } else {
+      html += '<p class="hint">Aucune pesée enregistrée ce jour-là.</p>';
+    }
+
+    html += '<p class="section-label">Repas</p>';
+    if (entries.length === 0) {
+      html += '<p class="hint">Aucun repas enregistré ce jour-là.</p>';
+    } else {
+      REPAS.forEach(function (repas) {
+        var forRepas = entries.filter(function (e) { return e.repas === repas; });
+        if (!forRepas.length) return;
+        html += '<p class="hint" style="font-weight:600; color:var(--text); margin:14px 0 6px;">' + repas + '</p>';
+        forRepas.forEach(function (e) {
+          var idx = entries.indexOf(e);
+          html += '<div class="field item-card">' +
+            '<div><div class="label">' + e.nom + '</div><div class="hint">' + Math.round(e.kcal || 0) + ' kcal</div></div>' +
+            '<div class="input-wrap"><input type="number" class="cal-entry-qty-input" data-idx="' + idx + '" inputmode="decimal" step="0.1" value="' + e.quantite + '" style="width:48px;"><span class="unit">×</span>' +
+            '<button class="delete-btn cal-entry-remove" data-idx="' + idx + '" aria-label="Supprimer">✕</button></div>' +
+          '</div>';
+        });
+      });
+    }
+
+    html += evolutionSectionHTML(dateISO);
+    return html;
+  }
+
+  function wireDayDetail(dateISO) {
+    var weightInput = document.querySelector(".cal-weight-input");
+    if (weightInput) {
+      weightInput.addEventListener("change", function () {
+        var kg = parseFloat(weightInput.value);
+        if (!kg || kg <= 0) return;
+        var w = getWeightForDay(dateISO);
+        if (w) w.kg = Math.round(kg * 10) / 10;
+        saveData();
+        renderPage();
+      });
+    }
+    var weightRemove = document.querySelector(".cal-weight-remove");
+    if (weightRemove) {
+      weightRemove.addEventListener("click", function () {
+        state.data.poids = state.data.poids.filter(function (p) { return p.date !== dateISO; });
+        saveData();
+        renderPage();
+      });
+    }
+    document.querySelectorAll(".cal-entry-qty-input").forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        var idx = parseInt(inp.getAttribute("data-idx"), 10);
+        var entry = state.data.journal[dateISO][idx];
+        var newQty = parseFloat(inp.value);
+        if (!newQty || newQty <= 0 || !entry) return;
+        var ratio = newQty / entry.quantite;
+        NUTRIENT_KEYS.forEach(function (k) { entry[k] = Math.round((entry[k] || 0) * ratio * 10) / 10; });
+        entry.quantite = newQty;
+        saveData();
+        renderPage();
+      });
+    });
+    document.querySelectorAll(".cal-entry-remove").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var idx = parseInt(btn.getAttribute("data-idx"), 10);
+        state.data.journal[dateISO].splice(idx, 1);
+        saveData();
+        renderPage();
+      });
+    });
+  }
+
+  var EVOL_METRICS = [
+    { valKey: "valKcal", objKey: "objKcal", label: "Calories", unit: "kcal", color: "var(--c-kcal)" },
+    { valKey: "valProt", objKey: "objProt", label: "Protéines", unit: "g", color: "var(--c-prot)" },
+    { valKey: "valGluc", objKey: "objGluc", label: "Glucides", unit: "g", color: "var(--c-gluc)" },
+    { valKey: "valLip", objKey: "objLip", label: "Lipides", unit: "g", color: "var(--c-lip)" },
+    { valKey: "valFib", objKey: "objFib", label: "Fibres", unit: "g", color: "var(--c-fib)" }
+  ];
+
+  // Calcule, pour chaque jour de la fenêtre se terminant à endDateISO, la valeur
+  // enregistrée et l'objectif réellement en vigueur ce jour précis (l'objectif
+  // peut donc varier dans le temps s'il a été modifié pendant la période).
+  function getPeriodData(endDateISO, numDays) {
+    var days = [];
+    for (var i = numDays - 1; i >= 0; i--) {
+      var d = addDaysISO(endDateISO, -i);
+      var entries = state.data.journal[d] || [];
+      var obj = getObjectifsForDate(d);
+      var weight = getWeightForDay(d);
+      var t = { kcal: 0, proteines: 0, glucides: 0, lipides: 0, fibres: 0 };
+      entries.forEach(function (e) {
+        t.kcal += e.kcal || 0; t.proteines += e.proteines || 0; t.glucides += e.glucides || 0;
+        t.lipides += e.lipides || 0; t.fibres += e.fibres || 0;
+      });
+      days.push({
+        date: d,
+        hasData: entries.length > 0,
+        valKcal: t.kcal, objKcal: obj.kcal,
+        valProt: t.proteines, objProt: obj.proteines,
+        valGluc: t.glucides, objGluc: obj.glucides,
+        valLip: t.lipides, objLip: obj.lipides,
+        valFib: t.fibres, objFib: obj.fibres,
+        poids: weight ? weight.kg : null
+      });
+    }
+    return days;
+  }
+
+  // Trace deux courbes : l'objectif (pointillé) et les valeurs enregistrées
+  // (trait plein + points, dans la couleur propre à la métrique), jour par
+  // jour en abscisse.
+  function lineChartSVG(days, valKey, objKey, width, height, color) {
+    var n = days.length;
+    var pad = 4;
+    var labelW = 34; // espace réservé à droite pour la valeur de l'objectif
+    var innerW = width - pad * 2 - labelW;
+    var innerH = height - pad * 2;
+    var allVals = [];
+    days.forEach(function (d) { allVals.push(d[valKey], d[objKey]); });
+    var maxV = Math.max.apply(null, allVals.concat([1])) * 1.15;
+    var stepX = n > 1 ? innerW / (n - 1) : 0;
+
+    function xy(key, i) {
+      var x = pad + i * stepX;
+      var y = pad + innerH - (days[i][key] / maxV) * innerH;
+      return [x, y];
+    }
+    function pointsFor(key) {
+      return days.map(function (d, i) {
+        var p = xy(key, i);
+        return p[0].toFixed(1) + "," + p[1].toFixed(1);
+      }).join(" ");
+    }
+
+    var dots = days.map(function (d, i) {
+      var p = xy(valKey, i);
+      var c = d.hasData ? color : "var(--text-faint)";
+      return '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="2.2" style="fill:' + c + '"></circle>';
+    }).join("");
+
+    var lastObjY = xy(objKey, n - 1)[1];
+    var objLabel = '<text x="' + (width - 2) + '" y="' + lastObjY.toFixed(1) + '" text-anchor="end" dominant-baseline="middle" ' +
+      'font-size="10" style="fill:var(--text-faint)">' + Math.round(days[n - 1][objKey]) + '</text>';
+
+    return '<svg viewBox="0 0 ' + width + ' ' + height + '" width="100%" height="' + height + '" preserveAspectRatio="none">' +
+      '<polyline points="' + pointsFor(objKey) + '" fill="none" style="stroke:var(--text-faint)" stroke-width="1.5" stroke-dasharray="3,3"></polyline>' +
+      '<polyline points="' + pointsFor(valKey) + '" fill="none" style="stroke:' + color + '" stroke-width="2"></polyline>' +
+      dots + objLabel +
+      '</svg>';
+  }
+
+  // Graphique à une seule courbe (pas d'objectif de poids dans l'app) — saute
+  // les jours sans pesée plutôt que de tomber à zéro, pour ne pas fausser la lecture.
+  function singleLineChartSVG(days, valKey, width, height, color) {
+    var known = [];
+    days.forEach(function (d, i) { if (d[valKey] !== null && d[valKey] !== undefined) known.push({ i: i, v: d[valKey] }); });
+    if (!known.length) {
+      return '<p class="hint">Aucune pesée sur cette période.</p>';
+    }
+    var pad = 4;
+    var innerW = width - pad * 2;
+    var innerH = height - pad * 2;
+    var n = days.length;
+    var stepX = n > 1 ? innerW / (n - 1) : 0;
+    var vals = known.map(function (k) { return k.v; });
+    var minV = Math.min.apply(null, vals);
+    var maxV = Math.max.apply(null, vals);
+    if (minV === maxV) { minV -= 1; maxV += 1; }
+    var rangeV = (maxV - minV) * 1.2;
+    var mid = (maxV + minV) / 2;
+    minV = mid - rangeV / 2;
+
+    function xy(k) {
+      var x = pad + k.i * stepX;
+      var y = pad + innerH - ((k.v - minV) / rangeV) * innerH;
+      return [x, y];
+    }
+    var points = known.map(function (k) { var p = xy(k); return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" ");
+    var dots = known.map(function (k) {
+      var p = xy(k);
+      return '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="2.4" style="fill:' + color + '"></circle>';
+    }).join("");
+
+    return '<svg viewBox="0 0 ' + width + ' ' + height + '" width="100%" height="' + height + '" preserveAspectRatio="none">' +
+      '<polyline points="' + points + '" fill="none" style="stroke:' + color + '" stroke-width="2"></polyline>' +
+      dots +
+      '</svg>';
+  }
+
+  function evolutionRowsHTML(days) {
+    var html = "";
+    EVOL_METRICS.forEach(function (m) {
+      var withData = days.filter(function (d) { return d.hasData; });
+      var avgVal = withData.length ? withData.reduce(function (s, d) { return s + d[m.valKey]; }, 0) / withData.length : 0;
+      var avgObj = days.reduce(function (s, d) { return s + d[m.objKey]; }, 0) / days.length;
+      html += '<div style="margin-bottom:18px;">' +
+        '<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px;">' +
+          '<span class="hint" style="color:' + m.color + '; font-weight:600;">' + m.label + '</span>' +
+          '<span class="hint">' + (withData.length ? "moy. " + Math.round(avgVal) + " / " + Math.round(avgObj) + " " + m.unit : "—") + '</span>' +
+        '</div>' +
+        lineChartSVG(days, m.valKey, m.objKey, 320, 56, m.color) +
+      '</div>';
+    });
+
+    var weighed = days.filter(function (d) { return d.poids !== null; });
+    var avgPoids = weighed.length ? weighed.reduce(function (s, d) { return s + d.poids; }, 0) / weighed.length : 0;
+    html += '<div style="margin-bottom:18px;">' +
+      '<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px;">' +
+        '<span class="hint" style="color:var(--c-poids); font-weight:600;">Poids</span>' +
+        '<span class="hint">' + (weighed.length ? "moy. " + (Math.round(avgPoids * 10) / 10) + " kg" : "—") + '</span>' +
+      '</div>' +
+      singleLineChartSVG(days, "poids", 320, 56, "var(--c-poids)") +
+    '</div>';
+
+    return html;
+  }
+
+  function evolutionSectionHTML(dateISO) {
+    var days7 = getPeriodData(dateISO, 7);
+    var days30 = getPeriodData(dateISO, 30);
+    return (
+      '<p class="section-label" style="margin-top:30px;">Évolution</p>' +
+      '<div style="display:flex; gap:16px; margin-bottom:16px;">' +
+        '<span class="hint"><span style="display:inline-block;width:14px;border-top:2px dashed var(--text-faint);vertical-align:middle;margin-right:5px;"></span>Objectif</span>' +
+        '<span class="hint"><span style="display:inline-block;width:14px;border-top:2px solid var(--text);vertical-align:middle;margin-right:5px;"></span>Enregistré (couleur par type)</span>' +
+      '</div>' +
+      '<p class="hint" style="font-weight:600; color:var(--text); margin-bottom:10px;">7 derniers jours</p>' +
+      evolutionRowsHTML(days7) +
+      '<p class="hint" style="font-weight:600; color:var(--text); margin:6px 0 10px;">30 derniers jours</p>' +
+      evolutionRowsHTML(days30)
+    );
+  }
+
+  function wireCalendrier() {
+    document.getElementById("cal-prev").addEventListener("click", function () {
+      calState.month -= 1;
+      if (calState.month < 0) { calState.month = 11; calState.year -= 1; }
+      renderPage();
+    });
+    document.getElementById("cal-next").addEventListener("click", function () {
+      calState.month += 1;
+      if (calState.month > 11) { calState.month = 0; calState.year += 1; }
+      renderPage();
+    });
+    document.getElementById("cal-today").addEventListener("click", function () {
+      var now = new Date();
+      calState.year = now.getFullYear();
+      calState.month = now.getMonth();
+      calState.selected = todayISO();
+      renderPage();
+    });
+    document.querySelectorAll(".cal-cell[data-date]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        calState.selected = btn.getAttribute("data-date");
+        document.querySelectorAll(".cal-cell").forEach(function (c) { c.classList.remove("selected"); });
+        btn.classList.add("selected");
+        document.getElementById("cal-day-detail").innerHTML = dayDetailHTML(calState.selected);
+        wireDayDetail(calState.selected);
+      });
+    });
+    wireDayDetail(calState.selected);
+  }
+
+  // ============ Aliments & Plats ============
+  var aState = {
+    view: "aliments",       // "aliments" | "plats" | "boissons"
+    modalOpen: false,
+    modalType: "Aliment",   // "Aliment" | "Plat" | "Boisson"
+    modalRefMode: "grammes", // "grammes" | "unite"
+    modalIngredients: [],   // composition d'un Plat : [{alimentId, quantite}]
+    modalPickedAliment: null,
+    openSelectId: null,     // menu déroulant maison actuellement ouvert
+    editingId: null,        // id de l'élément en cours de modification (null = création)
+    editingValues: null,
+    weightModalOpen: false,
+    typeModalOpen: null,
+    mealRepas: null,
+    mealDate: null,
+    stagedItems: [],
+    pickerMode: false,
+    exportScope: "tout",
+    importMode: "ajouter"
+  };
+
+  var NUTRIENT_KEYS = ["kcal","proteines","glucides","sucres","lipides","satures","fibres","sel",
+    "sodium","potassium","calcium","magnesium","fer","silice","bicarbonates","sulfates","chlorures","nitrates","fluor",
+    "vitamineA","vitamineD","vitamineE","vitamineK","vitamineC","vitamineB1","vitamineB2","vitamineB3","vitamineB5","vitamineB6","vitamineB9","vitamineB12"];
+  var NUTRIENT_FIELD_IDS = {
+    kcal:"m-kcal", proteines:"m-prot", glucides:"m-gluc", sucres:"m-sucres", lipides:"m-lip",
+    satures:"m-satures", fibres:"m-fibres", sel:"m-sel", sodium:"m-sodium", potassium:"m-potassium",
+    calcium:"m-calcium", magnesium:"m-magnesium", fer:"m-fer", silice:"m-silice",
+    bicarbonates:"m-bicarbonates", sulfates:"m-sulfates", chlorures:"m-chlorures",
+    nitrates:"m-nitrates", fluor:"m-fluor",
+    vitamineA:"m-vitamineA", vitamineD:"m-vitamineD", vitamineE:"m-vitamineE", vitamineK:"m-vitamineK",
+    vitamineC:"m-vitamineC", vitamineB1:"m-vitamineB1", vitamineB2:"m-vitamineB2", vitamineB3:"m-vitamineB3",
+    vitamineB5:"m-vitamineB5", vitamineB6:"m-vitamineB6", vitamineB9:"m-vitamineB9", vitamineB12:"m-vitamineB12"
+  };
+  var NUTRIENT_LABELS = {
+    kcal:"Calories", proteines:"Protéines", glucides:"Glucides", sucres:"Sucres", lipides:"Lipides",
+    satures:"Acides gras saturés", fibres:"Fibres", sel:"Sel", sodium:"Sodium", potassium:"Potassium",
+    calcium:"Calcium", magnesium:"Magnésium", fer:"Fer", silice:"Silice",
+    bicarbonates:"Bicarbonates", sulfates:"Sulfates", chlorures:"Chlorures",
+    nitrates:"Nitrates", fluor:"Fluor",
+    vitamineA:"Vitamine A", vitamineD:"Vitamine D", vitamineE:"Vitamine E", vitamineK:"Vitamine K",
+    vitamineC:"Vitamine C", vitamineB1:"Vitamine B1", vitamineB2:"Vitamine B2", vitamineB3:"Vitamine B3",
+    vitamineB5:"Vitamine B5", vitamineB6:"Vitamine B6", vitamineB9:"Vitamine B9", vitamineB12:"Vitamine B12"
+  };
+  var NUTRIENT_UNITS = {
+    kcal:"kcal", proteines:"g", glucides:"g", sucres:"g", lipides:"g", satures:"g", fibres:"g", sel:"g",
+    sodium:"mg", potassium:"mg", calcium:"mg", magnesium:"mg", fer:"mg", silice:"mg",
+    bicarbonates:"mg", sulfates:"mg", chlorures:"mg", nitrates:"mg", fluor:"mg",
+    vitamineA:"µg", vitamineD:"µg", vitamineE:"mg", vitamineK:"µg", vitamineC:"mg",
+    vitamineB1:"mg", vitamineB2:"mg", vitamineB3:"mg", vitamineB5:"mg", vitamineB6:"mg",
+    vitamineB9:"µg", vitamineB12:"µg"
+  };
+
+  function makeId() {
+    return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+  }
+
+  // ---- Menu déroulant maison (remplace <select>, illisible sur iOS avec cette charte sombre) ----
+  function customSelectHTML(fieldId, label, options, currentValue) {
+    var currentOpt = options.find(function (o) { return o.value === currentValue; }) || options[0] || { label: "—" };
+    var optsHTML = options.map(function (o) {
+      return '<button type="button" class="' + (o.value === currentValue ? "selected" : "") + '" data-value="' + o.value + '">' +
+        '<span>' + o.label + '</span>' + (o.value === currentValue ? '<span class="check">✓</span>' : '') +
+        '</button>';
+    }).join("");
+    var isOpen = aState.openSelectId === fieldId;
+    return (
+      '<div class="custom-select" data-select-id="' + fieldId + '">' +
+        '<button type="button" class="field select-trigger" id="' + fieldId + '-trigger">' +
+          (label ? '<div class="label">' + label + '</div>' : '<span></span>') +
+          '<div class="input-wrap"><span class="trigger-value">' + currentOpt.label + '</span>' +
+          '<svg class="chevron' + (isOpen ? " open" : "") + '" viewBox="0 0 24 24" width="16" height="16">' +
+          '<path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+        '</button>' +
+        '<div class="select-options"' + (isOpen ? "" : " hidden") + ' id="' + fieldId + '-options">' + optsHTML + '</div>' +
+      '</div>'
+    );
+  }
+
+  function wireCustomSelects(onChangeMap, refreshFn) {
+    var refresh = refreshFn || rerenderModal;
+    document.querySelectorAll(".custom-select").forEach(function (wrap) {
+      var fieldId = wrap.getAttribute("data-select-id");
+      var trigger = document.getElementById(fieldId + "-trigger");
+      trigger.addEventListener("click", function () {
+        aState.openSelectId = (aState.openSelectId === fieldId) ? null : fieldId;
+        refresh();
+      });
+      var options = document.getElementById(fieldId + "-options");
+      options.querySelectorAll("button[data-value]").forEach(function (opt) {
+        opt.addEventListener("click", function () {
+          var value = opt.getAttribute("data-value");
+          aState.openSelectId = null;
+          if (onChangeMap[fieldId]) onChangeMap[fieldId](value);
+          refresh();
+        });
+      });
+    });
+  }
+
+  // ---- Composition d'un plat à partir d'aliments existants ----
+  function computeIngredientContribution(ing) {
+    var aliment = state.data.aliments.find(function (a) { return a.id === ing.alimentId; });
+    var out = {};
+    NUTRIENT_KEYS.forEach(function (k) { out[k] = 0; });
+    if (!aliment) return out;
+    var factor = aliment.refMode === "unite" ? ing.quantite : ing.quantite / aliment.refQuantite;
+    NUTRIENT_KEYS.forEach(function (k) { out[k] = (aliment[k] || 0) * factor; });
+    return out;
+  }
+
+  function applyIngredientTotalsToFields() {
+    var totals = {};
+    NUTRIENT_KEYS.forEach(function (k) { totals[k] = 0; });
+    aState.modalIngredients.forEach(function (ing) {
+      var c = computeIngredientContribution(ing);
+      NUTRIENT_KEYS.forEach(function (k) { totals[k] += c[k]; });
+    });
+    NUTRIENT_KEYS.forEach(function (k) {
+      var el = document.getElementById(NUTRIENT_FIELD_IDS[k]);
+      if (el) el.value = Math.round(totals[k] * 10) / 10;
+    });
+  }
+
+  function ingredientsListHTML() {
+    if (!aState.modalIngredients.length) return "";
+    var html = '<div style="margin-bottom:6px;">';
+    aState.modalIngredients.forEach(function (ing, idx) {
+      var aliment = state.data.aliments.find(function (a) { return a.id === ing.alimentId; });
+      var nom = aliment ? aliment.nom : "?";
+      var unit = aliment && aliment.refMode === "unite" ? " unité(s)" : " g";
+      var contrib = computeIngredientContribution(ing);
+      html += '<div class="field item-card">' +
+        '<div><div class="label">' + nom + '</div><div class="hint">' + ing.quantite + unit + '</div></div>' +
+        '<div class="input-wrap"><span class="past-kcal">' + Math.round(contrib.kcal) + '</span><span class="unit">kcal</span>' +
+        '<button class="delete-btn ing-remove-btn" data-ing-idx="' + idx + '" aria-label="Retirer">✕</button></div>' +
+      '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  // Les 5 métriques déjà harmonisées ailleurs dans l'app (Objectifs, Calendrier) ;
+  // le reste (minéraux, vitamines, sucres, saturés...) n'a pas de couleur dédiée
+  // et reste neutre, pour ne pas surcharger visuellement la liste.
+  var NUTRIENT_COLOR = {
+    kcal: "var(--c-kcal)", proteines: "var(--c-prot)", glucides: "var(--c-gluc)",
+    lipides: "var(--c-lip)", fibres: "var(--c-fib)"
+  };
+
+  function itemStatChipsHTML(item) {
+    var html = "";
+    NUTRIENT_KEYS.forEach(function (k) {
+      var v = item[k] || 0;
+      if (v === 0) return; // les valeurs à 0 ne s'affichent pas
+      var color = NUTRIENT_COLOR[k];
+      var vStyle = color ? ' style="color:' + color + ';"' : "";
+      var lStyle = color ? ' style="color:' + color + ';"' : "";
+      html += '<div class="chip"><span class="v"' + vStyle + '>' + v + ' <span class="u-plain">' + NUTRIENT_UNITS[k] + '</span></span><span class="l"' + lStyle + '>' + NUTRIENT_LABELS[k] + '</span></div>';
+    });
+    return html || '<p class="hint" style="margin:2px 0 0;">Aucune valeur nutritionnelle renseignée.</p>';
+  }
+
+  function aliementsHTML() {
+    var list = state.data[aState.view]; // "aliments", "plats" ou "boissons"
+    var unitWord = aState.view === "boissons" ? "mL" : "g";
+    var listHTML = "";
+    if (!list.length) {
+      var noms = { aliments: "aliment", plats: "plat", boissons: "boisson" };
+      listHTML = '<p class="hint" style="text-align:center; padding:30px 10px;">' +
+        "Aucun " + noms[aState.view] + " enregistré." +
+        ' Appuie sur "Ajouter" pour en créer un.</p>';
+    } else {
+      list.forEach(function (item) {
+        var refLabel = item.refMode === "unite" ? "1 unité" : item.refQuantite + " " + unitWord;
+        listHTML += '<div class="list-card" data-item-id="' + item.id + '">' +
+          '<div class="item-card-main" role="button" tabindex="0" data-edit-id="' + item.id + '">' +
+            '<div class="item-card-left">' +
+              '<div class="label">' + item.nom + '</div>' +
+              '<div class="chip-row">' + itemStatChipsHTML(item) + '</div>' +
+            '</div>' +
+            '<div class="item-card-right"><span class="portion-big">' + refLabel + '</span></div>' +
+          '</div>' +
+          '<button class="delete-btn card-delete" data-id="' + item.id + '" aria-label="Supprimer">✕</button>' +
+        '</div>';
+      });
+    }
+
+    return (
+      '<div class="segmented" id="view-toggle">' +
+        '<button class="' + (aState.view === "aliments" ? "active" : "") + '" data-view="aliments">Aliments</button>' +
+        '<button class="' + (aState.view === "plats" ? "active" : "") + '" data-view="plats">Plats</button>' +
+        '<button class="' + (aState.view === "boissons" ? "active" : "") + '" data-view="boissons">Boissons</button>' +
+      '</div>' +
+      '<button class="btn primary" id="btn-add-item" style="margin-bottom:18px;">Ajouter</button>' +
+      '<div id="item-list">' + listHTML + '</div>' +
+      modalHTML()
+    );
+  }
+
+  function modalHTML() {
+    var t = aState.modalType;
+    var r = isRefModeForced(t) ? "grammes" : aState.modalRefMode;
+    var isBoisson = t === "Boisson";
+    var isPlat = t === "Plat";
+    var isEditing = !!aState.editingId;
+    var ev = aState.editingValues || {};
+    var volUnit = isBoisson ? "mL" : "g";
+    var refDefault = isEditing ? ev.refQuantite : (isBoisson ? 1000 : 100);
+    function nv(key) { return isEditing ? (ev[key] || 0) : 0; }
+
+    var ingredientsSectionHTML = "";
+    if (isPlat) {
+      var alimentsList = state.data.aliments;
+      if (!alimentsList.length) {
+        ingredientsSectionHTML =
+          '<p class="section-label">Composer à partir d\'aliments</p>' +
+          '<p class="hint">Ajoute d\'abord des aliments à ta base (onglet Aliments) pour composer un plat à partir d\'eux — ou remplis les nutriments totaux à la main ci-dessous.</p>';
+      } else {
+        var pickedId = aState.modalPickedAliment || alimentsList[0].id;
+        var picked = alimentsList.find(function (a) { return a.id === pickedId; }) || alimentsList[0];
+        var pickedUnit = picked.refMode === "unite" ? "unité(s)" : "g";
+        var pickedDefault = picked.refMode === "unite" ? 1 : picked.refQuantite;
+        var alimentOptions = alimentsList.map(function (a) { return { value: a.id, label: a.nom }; });
+
+        ingredientsSectionHTML =
+          '<p class="section-label">Composer à partir d\'aliments (optionnel)</p>' +
+          customSelectHTML("m-ingredient-pick", "Aliment", alimentOptions, pickedId) +
+          '<div class="field">' +
+            '<div class="label">Quantité</div>' +
+            '<div class="input-wrap"><input type="number" id="m-ingredient-qte" inputmode="decimal" value="' + pickedDefault + '"><span class="unit">' + pickedUnit + '</span></div>' +
+          '</div>' +
+          '<button type="button" class="btn" id="btn-add-ingredient" style="margin-bottom:14px;">Ajouter cet ingrédient</button>' +
+          ingredientsListHTML() +
+          (aState.modalIngredients.length ?
+            '<p class="hint">Les nutriments ci-dessous se recalculent à chaque ajout/suppression — modifiables ensuite à la main.</p>' : '');
+      }
+    }
+
+    return (
+      '<div class="modal-backdrop ' + (aState.modalOpen ? "open" : "") + '" id="modal-backdrop">' +
+        '<div class="modal-sheet">' +
+          '<div class="modal-head">' +
+            '<span class="modal-title">' + (isEditing ? "Modifier" : "Nouvel élément") + '</span>' +
+            '<button class="modal-close" id="modal-close" aria-label="Fermer">✕</button>' +
+          '</div>' +
+          '<div class="modal-body">' +
+
+            '<p class="section-label" style="margin-top:6px;">Type</p>' +
+            '<div class="segmented" id="type-toggle">' +
+              '<button class="' + (t === "Aliment" ? "active" : "") + '" data-type="Aliment">Aliment</button>' +
+              '<button class="' + (t === "Plat" ? "active" : "") + '" data-type="Plat">Plat</button>' +
+              '<button class="' + (t === "Boisson" ? "active" : "") + '" data-type="Boisson">Boisson</button>' +
+            '</div>' +
+
+            '<p class="section-label">Nom</p>' +
+            '<div class="field"><input type="text" id="m-nom" class="text-input" value="' + (isEditing ? ev.nom : "") + '" placeholder="' +
+              (isBoisson ? "Ex : Eau minérale" : "Ex : Blanc de poulet") + '"></div>' +
+
+            '<p class="section-label">Quantité de référence</p>' +
+            (isBoisson ? "" :
+              '<div class="segmented" id="ref-toggle">' +
+                '<button class="' + (r === "grammes" ? "active" : "") + '" data-ref="grammes">En grammes</button>' +
+                '<button class="' + (r === "unite" ? "active" : "") + '" data-ref="unite">Sans unité (1 pièce/portion)</button>' +
+              '</div>'
+            ) +
+            '<div class="field" id="ref-grammes-field" style="' + (r === "unite" ? "display:none;" : "") + '">' +
+              '<div class="label">' + (isBoisson ? "Volume de la référence" : "Poids de la référence") + '</div>' +
+              '<div class="input-wrap"><input type="number" id="m-refqte" inputmode="numeric" value="' + refDefault + '"><span class="unit">' + volUnit + '</span></div>' +
+            '</div>' +
+            (isBoisson ?
+              '<p class="hint">Astuce : laisse 1000 mL pour saisir directement les minéraux tels qu\'affichés sur l\'étiquette (mg/L).</p>' : '') +
+            '<p class="hint" id="ref-unite-hint" style="' + (r === "unite" ? "" : "display:none;") + '">Les valeurs ci-dessous s\'appliquent à 1 pièce (ex : 1 œuf, 1 portion).</p>' +
+
+            ingredientsSectionHTML +
+
+            '<p class="section-label">Macronutriments (pour la référence ci-dessus)</p>' +
+            nutrientField("m-kcal", "Calories", "kcal", nv("kcal"), "var(--c-kcal)") +
+            nutrientField("m-prot", "Protéines", "g", nv("proteines"), "var(--c-prot)") +
+            nutrientGroup(
+              nutrientField("m-gluc", "Glucides", "g", nv("glucides"), "var(--c-gluc)"),
+              nutrientField("m-sucres", "dont sucres", "g", nv("sucres")),
+              "err-sucres", "Les sucres ne peuvent pas dépasser les glucides."
+            ) +
+            nutrientGroup(
+              nutrientField("m-lip", "Lipides (matières grasses)", "g", nv("lipides"), "var(--c-lip)"),
+              nutrientField("m-satures", "dont acides gras saturés", "g", nv("satures")),
+              "err-satures", "Les acides gras saturés ne peuvent pas dépasser les lipides."
+            ) +
+            nutrientField("m-fibres", "Fibres", "g", nv("fibres"), "var(--c-fib)") +
+
+            '<p class="section-label">Minéraux</p>' +
+            nutrientField("m-sel", "Sel", "g", nv("sel")) +
+            nutrientField("m-sodium", "Sodium", "mg", nv("sodium")) +
+            nutrientField("m-potassium", "Potassium", "mg", nv("potassium")) +
+            nutrientField("m-calcium", "Calcium", "mg", nv("calcium")) +
+            nutrientField("m-magnesium", "Magnésium", "mg", nv("magnesium")) +
+            nutrientField("m-fer", "Fer", "mg", nv("fer")) +
+
+            '<p class="section-label">Oligo-éléments (composition de l\'eau)</p>' +
+            nutrientField("m-silice", "Silice", "mg", nv("silice")) +
+            nutrientField("m-bicarbonates", "Bicarbonates", "mg", nv("bicarbonates")) +
+            nutrientField("m-sulfates", "Sulfates", "mg", nv("sulfates")) +
+            nutrientField("m-chlorures", "Chlorures", "mg", nv("chlorures")) +
+            nutrientField("m-nitrates", "Nitrates", "mg", nv("nitrates")) +
+            nutrientField("m-fluor", "Fluor", "mg", nv("fluor")) +
+
+            '<p class="section-label">Vitamines</p>' +
+            nutrientField("m-vitamineA", "Vitamine A", "µg", nv("vitamineA")) +
+            nutrientField("m-vitamineD", "Vitamine D", "µg", nv("vitamineD")) +
+            nutrientField("m-vitamineE", "Vitamine E", "mg", nv("vitamineE")) +
+            nutrientField("m-vitamineK", "Vitamine K", "µg", nv("vitamineK")) +
+            nutrientField("m-vitamineC", "Vitamine C", "mg", nv("vitamineC")) +
+            nutrientField("m-vitamineB1", "Vitamine B1 (thiamine)", "mg", nv("vitamineB1")) +
+            nutrientField("m-vitamineB2", "Vitamine B2 (riboflavine)", "mg", nv("vitamineB2")) +
+            nutrientField("m-vitamineB3", "Vitamine B3 (niacine)", "mg", nv("vitamineB3")) +
+            nutrientField("m-vitamineB5", "Vitamine B5", "mg", nv("vitamineB5")) +
+            nutrientField("m-vitamineB6", "Vitamine B6", "mg", nv("vitamineB6")) +
+            nutrientField("m-vitamineB9", "Vitamine B9 (folates)", "µg", nv("vitamineB9")) +
+            nutrientField("m-vitamineB12", "Vitamine B12", "µg", nv("vitamineB12")) +
+
+            '<button class="btn primary" id="m-save" style="margin-top:8px;">' +
+              (isEditing ? "Enregistrer les modifications" : "Ajouter à la liste") + '</button>' +
+            '<p class="status-msg" id="modal-status"></p>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  // Regroupe un nutriment parent et son détail "dont" dans un même bloc visuel,
+  // avec le sous-élément clairement en retrait sous son parent, et un message
+  // d'erreur (masqué par défaut) si le "dont" dépasse son parent.
+  function nutrientGroup(parentFieldHTML, childFieldHTML, errorId, errorMsg) {
+    var childIndented = childFieldHTML.replace('class="field"', 'class="field sub"');
+    var errorHTML = errorId ? '<p class="hint warn-inline" id="' + errorId + '" hidden>' + errorMsg + '</p>' : '';
+    return '<div class="nutrient-group">' + parentFieldHTML + childIndented + '</div>' + errorHTML;
+  }
+
+  function nutrientField(id, label, unit, value, color) {
+    var style = color ? ' style="color:' + color + ';"' : "";
+    return '<div class="field">' +
+      '<div class="label"' + style + '>' + label + '</div>' +
+      '<div class="input-wrap"><input type="number" id="' + id + '" inputmode="decimal" step="0.1" value="' + (value || 0) + '"><span class="unit">' + unit + '</span></div>' +
+    '</div>';
+  }
+
+  function openModal(defaultType, editItem) {
+    aState.modalOpen = true;
+    if (editItem) {
+      aState.editingId = editItem.id;
+      aState.editingValues = editItem;
+      aState.modalType = aState.view === "plats" ? "Plat" : aState.view === "boissons" ? "Boisson" : "Aliment";
+      aState.modalRefMode = editItem.refMode === "unite" ? "unite" : "grammes";
+    } else {
+      aState.editingId = null;
+      aState.editingValues = null;
+      aState.modalType = defaultType ||
+        (aState.view === "plats" ? "Plat" : aState.view === "boissons" ? "Boisson" : "Aliment");
+      aState.modalRefMode = "grammes";
+    }
+    aState.modalIngredients = [];
+    aState.modalPickedAliment = null;
+    aState.openSelectId = null;
+    rerenderModal();
+  }
+
+  function closeModal() {
+    aState.modalOpen = false;
+    aState.editingId = null;
+    aState.editingValues = null;
+    aState.openSelectId = null;
+    rerenderModal();
+  }
+
+  function rerenderModal() {
+    var existing = document.getElementById("modal-backdrop");
+    if (existing) existing.outerHTML = modalHTML();
+    wireModal();
+  }
+
+  function wireAliments() {
+    document.querySelectorAll(".chip-row").forEach(function (row) {
+      if (row.scrollWidth > row.clientWidth + 1) row.classList.add("scrollable");
+    });
+    document.querySelectorAll("#view-toggle button").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        aState.view = btn.getAttribute("data-view");
+        renderPage();
+      });
+    });
+    document.getElementById("btn-add-item").addEventListener("click", function () { openModal(); });
+    document.querySelectorAll("#item-list .item-card-main").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-edit-id");
+        var item = state.data[aState.view].find(function (it) { return it.id === id; });
+        if (item) openModal(null, item);
+      });
+    });
+    document.querySelectorAll("#item-list .card-delete").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var id = btn.getAttribute("data-id");
+        state.data[aState.view] = state.data[aState.view].filter(function (it) { return it.id !== id; });
+        saveData();
+        renderPage();
+      });
+    });
+    wireModal();
+  }
+
+  function isRefModeForced(type) {
+    return type === "Boisson"; // les boissons sont toujours en mL, jamais "sans unité"
+  }
+
+  // Vérifie qu'un sous-élément "dont" ne dépasse pas son parent (ex : sucres ≤ glucides).
+  // Retourne une fonction check() réutilisable pour la validation en direct et au moment d'enregistrer.
+  function wireDontValidation(parentId, childId, errorId) {
+    var parentEl = document.getElementById(parentId);
+    var childEl = document.getElementById(childId);
+    var errEl = document.getElementById(errorId);
+    if (!parentEl || !childEl || !errEl) return function () { return false; };
+    function check() {
+      var p = parseFloat(parentEl.value) || 0;
+      var c = parseFloat(childEl.value) || 0;
+      var invalid = c > p;
+      errEl.hidden = !invalid;
+      var fieldEl = childEl.closest(".field");
+      if (fieldEl) fieldEl.classList.toggle("field-error", invalid);
+      return invalid;
+    }
+    parentEl.addEventListener("input", check);
+    childEl.addEventListener("input", check);
+    check();
+    return check;
+  }
+
+  function wireModal() {
+    var backdrop = document.getElementById("modal-backdrop");
+    if (!backdrop) return;
+    document.getElementById("modal-close").addEventListener("click", closeModal);
+    backdrop.addEventListener("click", function (e) { if (e.target === backdrop) closeModal(); });
+
+    document.querySelectorAll("#type-toggle button").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        aState.modalType = btn.getAttribute("data-type");
+        if (isRefModeForced(aState.modalType)) aState.modalRefMode = "grammes";
+        aState.modalIngredients = [];
+        aState.modalPickedAliment = null;
+        rerenderModal();
+      });
+    });
+    document.querySelectorAll("#ref-toggle button").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        aState.modalRefMode = btn.getAttribute("data-ref");
+        rerenderModal();
+      });
+    });
+
+    wireCustomSelects({
+      "m-ingredient-pick": function (value) {
+        aState.modalPickedAliment = value;
+      }
+    });
+
+    var addIngBtn = document.getElementById("btn-add-ingredient");
+    if (addIngBtn) {
+      addIngBtn.addEventListener("click", function () {
+        var alimentsList = state.data.aliments;
+        var alimentId = aState.modalPickedAliment || (alimentsList[0] && alimentsList[0].id);
+        if (!alimentId) return;
+        var qte = clampNum(document.getElementById("m-ingredient-qte").value, 0.1, 5000, 1);
+        aState.modalIngredients.push({ alimentId: alimentId, quantite: qte });
+        rerenderModal();
+      });
+    }
+    document.querySelectorAll(".ing-remove-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var idx = parseInt(btn.getAttribute("data-ing-idx"), 10);
+        aState.modalIngredients.splice(idx, 1);
+        rerenderModal();
+      });
+    });
+
+    var checkSucres = wireDontValidation("m-gluc", "m-sucres", "err-sucres");
+    var checkSatures = wireDontValidation("m-lip", "m-satures", "err-satures");
+
+    if (aState.modalType === "Plat" && aState.modalIngredients.length) {
+      applyIngredientTotalsToFields();
+      checkSucres();
+      checkSatures();
+    }
+
+    document.getElementById("m-save").addEventListener("click", function () {
+      var nom = document.getElementById("m-nom").value.trim();
+      var st = document.getElementById("modal-status");
+      if (!nom) {
+        st.textContent = "Donne un nom avant d'ajouter.";
+        st.className = "status-msg warn";
+        return;
+      }
+      if (checkSucres()) {
+        st.textContent = "Les sucres ne peuvent pas dépasser les glucides.";
+        st.className = "status-msg warn";
+        return;
+      }
+      if (checkSatures()) {
+        st.textContent = "Les acides gras saturés ne peuvent pas dépasser les lipides.";
+        st.className = "status-msg warn";
+        return;
+      }
+      var refMode = isRefModeForced(aState.modalType) ? "grammes" : aState.modalRefMode;
+      var refQuantite = refMode === "grammes" ? clampNum(document.getElementById("m-refqte").value, 1, 5000, 100) : 1;
+
+      var entry = {
+        id: aState.editingId || makeId(),
+        nom: nom,
+        refMode: refMode,
+        refQuantite: refQuantite,
+        kcal: clampNum(document.getElementById("m-kcal").value, 0, 9999, 0),
+        proteines: clampNum(document.getElementById("m-prot").value, 0, 999, 0),
+        glucides: clampNum(document.getElementById("m-gluc").value, 0, 999, 0),
+        sucres: clampNum(document.getElementById("m-sucres").value, 0, 999, 0),
+        lipides: clampNum(document.getElementById("m-lip").value, 0, 999, 0),
+        satures: clampNum(document.getElementById("m-satures").value, 0, 999, 0),
+        fibres: clampNum(document.getElementById("m-fibres").value, 0, 999, 0),
+        sel: clampNum(document.getElementById("m-sel").value, 0, 999, 0),
+        sodium: clampNum(document.getElementById("m-sodium").value, 0, 9999, 0),
+        potassium: clampNum(document.getElementById("m-potassium").value, 0, 9999, 0),
+        calcium: clampNum(document.getElementById("m-calcium").value, 0, 9999, 0),
+        magnesium: clampNum(document.getElementById("m-magnesium").value, 0, 9999, 0),
+        fer: clampNum(document.getElementById("m-fer").value, 0, 999, 0),
+        silice: clampNum(document.getElementById("m-silice").value, 0, 9999, 0),
+        bicarbonates: clampNum(document.getElementById("m-bicarbonates").value, 0, 9999, 0),
+        sulfates: clampNum(document.getElementById("m-sulfates").value, 0, 9999, 0),
+        chlorures: clampNum(document.getElementById("m-chlorures").value, 0, 9999, 0),
+        nitrates: clampNum(document.getElementById("m-nitrates").value, 0, 9999, 0),
+        fluor: clampNum(document.getElementById("m-fluor").value, 0, 999, 0),
+        vitamineA: clampNum(document.getElementById("m-vitamineA").value, 0, 99999, 0),
+        vitamineD: clampNum(document.getElementById("m-vitamineD").value, 0, 9999, 0),
+        vitamineE: clampNum(document.getElementById("m-vitamineE").value, 0, 999, 0),
+        vitamineK: clampNum(document.getElementById("m-vitamineK").value, 0, 9999, 0),
+        vitamineC: clampNum(document.getElementById("m-vitamineC").value, 0, 999, 0),
+        vitamineB1: clampNum(document.getElementById("m-vitamineB1").value, 0, 999, 0),
+        vitamineB2: clampNum(document.getElementById("m-vitamineB2").value, 0, 999, 0),
+        vitamineB3: clampNum(document.getElementById("m-vitamineB3").value, 0, 999, 0),
+        vitamineB5: clampNum(document.getElementById("m-vitamineB5").value, 0, 999, 0),
+        vitamineB6: clampNum(document.getElementById("m-vitamineB6").value, 0, 999, 0),
+        vitamineB9: clampNum(document.getElementById("m-vitamineB9").value, 0, 9999, 0),
+        vitamineB12: clampNum(document.getElementById("m-vitamineB12").value, 0, 9999, 0)
+      };
+
+      var targetArray = aState.modalType === "Plat" ? "plats" : aState.modalType === "Boisson" ? "boissons" : "aliments";
+
+      if (aState.editingId) {
+        // Retire l'ancienne version, où qu'elle se trouve (au cas où le type aurait changé)
+        ["aliments", "plats", "boissons"].forEach(function (arr) {
+          state.data[arr] = state.data[arr].filter(function (it) { return it.id !== aState.editingId; });
+        });
+      }
+      state.data[targetArray].push(entry);
+      saveData();
+      aState.view = targetArray;
+      closeModal();
+      renderPage();
+    });
+  }
+
+  function clampNum(v, min, max, fallback) {
+    var n = parseFloat(v);
+    if (isNaN(n)) return fallback;
+    if (n < min) n = min;
+    if (n > max) n = max;
+    return Math.round(n * 10) / 10;
+  }
+
+  function setStatus(msg, kind) {
+    var el = document.getElementById("data-status");
+    if (!el) return;
+    el.textContent = msg;
+    el.className = "status-msg" + (kind ? " " + kind : "");
+  }
+
+  // ============ Export / Import ============
+  var SCOPE_LABELS = { tout: "toutes les données", aliments: "aliments", plats: "plats", boissons: "boissons" };
+
+  function buildExportPayload(scope) {
+    if (scope === "tout") {
+      return Object.assign({ exportScope: "tout" }, state.data);
+    }
+    var payload = { exportScope: scope };
+    payload[scope] = state.data[scope];
+    return payload;
+  }
+
+  function exportData(scope) {
+    scope = scope || "tout";
+    var payload = JSON.stringify(buildExportPayload(scope), null, 2);
+    var today = new Date().toISOString().slice(0, 10);
+    var filename = "carnet-" + scope + "-" + today + ".json";
+
+    // 1) Contexte Claude (artefact) : passe par la capacité downloads.
+    if (downloadsApi) {
+      setStatus("Préparation du fichier…");
+      downloadsApi.save({ filename: filename, data: payload })
+        .then(function () { markBackupDone(); setStatus("Sauvegarde enregistrée.", "good"); })
+        .catch(function (err) {
+          if (err && err.code === "declined") { setStatus("Export annulé."); return; }
+          setStatus("Échec de l'export (" + (err && err.code ? err.code : "erreur") + ").", "warn");
+        });
+      return;
+    }
+
+    // 2) App autonome (PWA installée) : feuille de partage native iOS/Android,
+    // qui propose "Enregistrer dans Fichiers" — permet de choisir un dossier
+    // iCloud Drive et donc de synchroniser entre appareils.
+    try {
+      var file = new File([payload], filename, { type: "application/json" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: filename })
+          .then(function () { markBackupDone(); setStatus("Sauvegarde partagée.", "good"); })
+          .catch(function (err) {
+            if (err && err.name === "AbortError") { setStatus("Export annulé."); return; }
+            fallbackDownload(payload, filename);
+          });
+        return;
+      }
+    } catch (e) { /* tombe sur le téléchargement standard ci-dessous */ }
+
+    // 3) Repli universel (desktop, Android sans partage fichier) : téléchargement Blob.
+    fallbackDownload(payload, filename);
+  }
+
+  function markBackupDone() {
+    try { localStorage.setItem("carnetNutritionLastBackup", new Date().toISOString()); } catch (e) {}
+    renderBackupIndicator();
+  }
+
+  function renderBackupIndicator() {
+    var el = document.getElementById("backup-indicator");
+    if (!el) return;
+    var raw = null;
+    try { raw = localStorage.getItem("carnetNutritionLastBackup"); } catch (e) {}
+    if (!raw) {
+      el.textContent = "Aucune sauvegarde exportée pour l'instant.";
+      el.className = "hint backup-indicator warn";
+      return;
+    }
+    var days = Math.floor((Date.now() - new Date(raw).getTime()) / 86400000);
+    var txt = days <= 0 ? "Dernière sauvegarde : aujourd'hui." :
+               days === 1 ? "Dernière sauvegarde : hier." :
+               "Dernière sauvegarde : il y a " + days + " jours.";
+    el.textContent = txt;
+    el.className = "hint backup-indicator" + (days >= 7 ? " warn" : "");
+  }
+
+  function fallbackDownload(payload, filename) {
+    try {
+      var blob = new Blob([payload], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      markBackupDone();
+      setStatus("Sauvegarde téléchargée.", "good");
+    } catch (e) {
+      setStatus("Échec du téléchargement sur cet appareil.", "warn");
+    }
+  }
+
+  function mergeListCategory(cat, items) {
+    if (!Array.isArray(items)) return 0;
+    var existingIds = {};
+    state.data[cat].forEach(function (it) { existingIds[it.id] = true; });
+    var added = 0;
+    items.forEach(function (item) {
+      var copy = Object.assign({}, item);
+      if (existingIds[copy.id]) copy.id = makeId(); // évite d'écraser un élément existant portant le même id
+      state.data[cat].push(copy);
+      existingIds[copy.id] = true;
+      added++;
+    });
+    return added;
+  }
+
+  function handleImportFile(ev) {
+    var file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    var mode = aState.importMode || "ajouter";
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var parsed = JSON.parse(reader.result);
+        if (!parsed || typeof parsed !== "object") {
+          setStatus("Fichier illisible : ce n'est pas un JSON valide.", "warn");
+          return;
+        }
+        // Détection de la portée du fichier : soit indiquée explicitement (nos propres
+        // exports), soit déduite (fichier complet = contient l'historique des objectifs).
+        var scope = parsed.exportScope ||
+          (parsed.objectifsHistory ? "tout" :
+           (parsed.aliments && !parsed.plats && !parsed.boissons ? "aliments" :
+            (parsed.plats && !parsed.aliments && !parsed.boissons ? "plats" :
+             (parsed.boissons && !parsed.aliments && !parsed.plats ? "boissons" : null))));
+        if (!scope) {
+          setStatus("Fichier non reconnu comme une sauvegarde du carnet.", "warn");
+          return;
+        }
+
+        var hasDailyData = scope === "tout" &&
+          ((parsed.journal && Object.keys(parsed.journal).length > 0) ||
+           (parsed.poids && parsed.poids.length > 0));
+
+        if (mode === "ajouter") {
+          if (hasDailyData) {
+            setStatus("Ce fichier contient des données de suivi journalier (repas et/ou pesées) : impossible de les ajouter à ce qui existe déjà. Choisis \"Tout remplacer\" pour importer ce fichier — cela effacera les données actuelles.", "warn");
+            return;
+          }
+          var addedCount = 0;
+          if (scope === "tout") {
+            ["aliments", "plats", "boissons"].forEach(function (cat) {
+              addedCount += mergeListCategory(cat, parsed[cat]);
+            });
+          } else {
+            addedCount += mergeListCategory(scope, parsed[scope]);
+          }
+          saveData();
+          renderPage();
+          setStatus(addedCount + " élément(s) ajouté(s) depuis le fichier.", "good");
+        } else {
+          // Remplacer
+          if (scope === "tout") {
+            var merged = Object.assign(freshData(), parsed);
+            if (!merged.objectifsHistory || !merged.objectifsHistory.length) {
+              merged.objectifsHistory = freshData().objectifsHistory;
+            }
+            merged.objectifsHistory.sort(function (a, b) { return a.depuis < b.depuis ? -1 : (a.depuis > b.depuis ? 1 : 0); });
+            merged.objectifsHistory.forEach(function (v) { if (typeof v.fibres !== "number") v.fibres = 35; });
+            delete merged.exportScope;
+            state.data = merged;
+          } else {
+            if (!parsed[scope]) { setStatus("Le fichier ne contient pas de " + SCOPE_LABELS[scope] + ".", "warn"); return; }
+            state.data[scope] = parsed[scope];
+          }
+          saveData();
+          renderPage();
+          setStatus("Données (" + SCOPE_LABELS[scope] + ") remplacées.", "good");
+        }
+      } catch (e) {
+        setStatus("Fichier illisible : ce n'est pas un JSON valide.", "warn");
+      }
+    };
+    reader.onerror = function () { setStatus("Impossible de lire le fichier.", "warn"); };
+    reader.readAsText(file);
+    ev.target.value = "";
+  }
+
+  // ============ Init ============
+  renderShell();
+  renderPage();
+
+  // Si le jour change pendant que l'app reste ouverte (à minuit, ou après une
+  // mise en arrière-plan prolongée), on rafraîchit tout automatiquement —
+  // "Ma journée" doit toujours refléter le jour réel, pas celui du dernier rendu.
+  var lastKnownDate = todayISO();
+  function checkDateRollover() {
+    var current = todayISO();
+    if (current !== lastKnownDate) {
+      lastKnownDate = current;
+      renderShell();
+      renderPage();
+    }
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") checkDateRollover();
+  });
+  window.addEventListener("focus", checkDateRollover);
+  setInterval(checkDateRollover, 60000);
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("./sw.js").catch(function (e) {
+        console.warn("Service worker non enregistré (normal en aperçu Claude) :", e);
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
